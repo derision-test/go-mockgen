@@ -37,8 +37,10 @@ func fileFilter(info os.FileInfo) bool {
 }
 
 func getFirst(pkgs map[string]*ast.Package) *ast.Package {
-	for _, pkg := range pkgs {
-		return pkg
+	if len(pkgs) == 1 {
+		for _, pkg := range pkgs {
+			return pkg
+		}
 	}
 
 	return nil

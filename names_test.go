@@ -7,7 +7,7 @@ import (
 
 type NamesSuite struct{}
 
-func (s *NamesSuite) TestX(t sweet.T) {
+func (s *NamesSuite) TestNameExtractor(t sweet.T) {
 	pkg, err := parseDir("./testing/names")
 	Expect(err).To(BeNil())
 

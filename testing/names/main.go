@@ -1,4 +1,4 @@
-package something
+package names
 
 type OuterType func() error
 

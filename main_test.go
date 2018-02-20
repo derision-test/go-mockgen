@@ -11,6 +11,7 @@ func TestMain(m *testing.M) {
 	RegisterFailHandler(sweet.GomegaFail)
 
 	sweet.Run(m, func(s *sweet.S) {
+		s.AddSuite(&ParserSuite{})
 		s.AddSuite(&NamesSuite{})
 	})
 }
