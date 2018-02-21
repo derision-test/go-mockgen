@@ -3,27 +3,45 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"os"
 	"path"
 	"strings"
 )
 
-var fset = token.NewFileSet()
+var (
+	fset       = token.NewFileSet()
+	typeConfig = types.Config{
+		Importer: importer.Default(),
+	}
+)
 
-func parseDir(name string) (*ast.Package, error) {
+func parseDir(name string) (*ast.Package, *types.Package, error) {
 	pkgs, err := parser.ParseDir(fset, name, fileFilter, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, fmt.Errorf("could not import package %s", name)
 	}
 
-	pkg := getFirst(pkgs)
-	if pkg == nil {
-		return nil, fmt.Errorf("could not import package %s", name)
+	files := []*ast.File{}
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			files = append(files, file)
+		}
 	}
 
-	return pkg, nil
+	pkgType, err := typeConfig.Check("", fset, files, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not import package %s", name)
+	}
+
+	if pkg := getFirst(pkgs); pkg != nil {
+		return pkg, pkgType, nil
+	}
+
+	return nil, nil, fmt.Errorf("could not import package %s", name)
 }
 
 func fileFilter(info os.FileInfo) bool {

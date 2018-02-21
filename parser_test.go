@@ -7,8 +7,8 @@ import (
 
 type ParserSuite struct{}
 
-func (s *ParserSuite) Testsimple(t sweet.T) {
-	pkg, err := parseDir("./testing/parser/nonnested")
+func (s *ParserSuite) TestSimple(t sweet.T) {
+	pkg, _, err := parseDir("./testing/parser/nonnested")
 	Expect(err).To(BeNil())
 	Expect(pkg.Name).To(Equal("nonnested"))
 	Expect(pkg.Files).To(HaveLen(3))
@@ -18,11 +18,11 @@ func (s *ParserSuite) Testsimple(t sweet.T) {
 }
 
 func (s *ParserSuite) TestEmpty(t sweet.T) {
-	_, err := parseDir("./testing/parser/empty")
+	_, _, err := parseDir("./testing/parser/empty")
 	Expect(err).To(MatchError("could not import package ./testing/parser/empty"))
 }
 
 func (s *ParserSuite) TestTwoPackages(t sweet.T) {
-	_, err := parseDir("./testing/parser/twopackages")
+	_, _, err := parseDir("./testing/parser/twopackages")
 	Expect(err).To(MatchError("could not import package ./testing/parser/twopackages"))
 }
