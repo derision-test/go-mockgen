@@ -15,5 +15,6 @@ func TestMain(m *testing.M) {
 	sweet.Run(m, func(s *sweet.S) {
 		s.AddSuite(&ParserSuite{})
 		s.AddSuite(&NamesSuite{})
+		s.AddSuite(&InterfacesSuite{})
 	})
 }
