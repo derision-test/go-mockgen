@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path/filepath"
+
 	"github.com/aphistic/sweet"
 	. "github.com/onsi/gomega"
 )
@@ -8,21 +10,21 @@ import (
 type ParserSuite struct{}
 
 func (s *ParserSuite) TestSimple(t sweet.T) {
-	pkg, _, err := parseDir("./testing/parser/nonnested")
+	pkg, _, err := parseDir(testPath + "/parser/nonnested")
 	Expect(err).To(BeNil())
 	Expect(pkg.Name).To(Equal("nonnested"))
 	Expect(pkg.Files).To(HaveLen(3))
-	Expect(pkg.Files).To(HaveKey("testing/parser/nonnested/x.go"))
-	Expect(pkg.Files).To(HaveKey("testing/parser/nonnested/y.go"))
-	Expect(pkg.Files).To(HaveKey("testing/parser/nonnested/z.go"))
+	Expect(pkg.Files).To(HaveKey(filepath.Join(gopath(), "src", testPath+"/parser/nonnested/x.go")))
+	Expect(pkg.Files).To(HaveKey(filepath.Join(gopath(), "src", testPath+"/parser/nonnested/y.go")))
+	Expect(pkg.Files).To(HaveKey(filepath.Join(gopath(), "src", testPath+"/parser/nonnested/z.go")))
 }
 
 func (s *ParserSuite) TestEmpty(t sweet.T) {
-	_, _, err := parseDir("./testing/parser/empty")
-	Expect(err).To(MatchError("could not import package ./testing/parser/empty"))
+	_, _, err := parseDir(testPath + "/parser/empty")
+	Expect(err).NotTo(BeNil())
 }
 
 func (s *ParserSuite) TestTwoPackages(t sweet.T) {
-	_, _, err := parseDir("./testing/parser/twopackages")
-	Expect(err).To(MatchError("could not import package ./testing/parser/twopackages"))
+	_, _, err := parseDir(testPath + "/parser/twopackages")
+	Expect(err).NotTo(BeNil())
 }

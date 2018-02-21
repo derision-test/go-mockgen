@@ -8,7 +8,7 @@ import (
 type NamesSuite struct{}
 
 func (s *NamesSuite) TestNameExtractor(t sweet.T) {
-	pkg, _, err := parseDir("./testing/names")
+	pkg, _, err := parseDir(testPath + "/names")
 	Expect(err).To(BeNil())
 
 	v := newNameExtractor()

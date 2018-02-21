@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/importer"
 	"go/parser"
 	"go/token"
 	"go/types"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -20,9 +22,9 @@ var (
 )
 
 func parseDir(name string) (*ast.Package, *types.Package, error) {
-	pkgs, err := parser.ParseDir(fset, name, fileFilter, 0)
+	pkgs, err := parser.ParseDir(fset, filepath.Join(gopath(), "src", name), fileFilter, 0)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not import package %s", name)
+		return nil, nil, fmt.Errorf("could not import package %s (%s)", name, err.Error())
 	}
 
 	files := []*ast.File{}
@@ -34,7 +36,7 @@ func parseDir(name string) (*ast.Package, *types.Package, error) {
 
 	pkgType, err := typeConfig.Check("", fset, files, nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not import package %s", name)
+		return nil, nil, fmt.Errorf("could not import package %s (%s)", name, err.Error())
 	}
 
 	if pkg := getFirst(pkgs); pkg != nil {
@@ -42,6 +44,14 @@ func parseDir(name string) (*ast.Package, *types.Package, error) {
 	}
 
 	return nil, nil, fmt.Errorf("could not import package %s", name)
+}
+
+func gopath() string {
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		return gopath
+	}
+
+	return build.Default.GOPATH
 }
 
 func fileFilter(info os.FileInfo) bool {
