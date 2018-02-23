@@ -14,14 +14,14 @@ const (
 	parameterNameFormat = "v%d"
 )
 
-func generate(specs map[string]*interfaceSpec, importPath string) error {
+func generate(specs map[string]*wrappedSpec) error {
 	file := jen.NewFile("test")
 
 	for name, spec := range specs {
-		generateInterfaceDefinition(file, name, spec, importPath)
-		generateTypeTest(file, name, spec, importPath)
-		generateConstructor(file, name, spec, importPath)
-		generateMethodImplementations(file, name, spec, importPath)
+		generateInterfaceDefinition(file, name, spec)
+		generateTypeTest(file, name, spec)
+		generateConstructor(file, name, spec)
+		generateMethodImplementations(file, name, spec)
 	}
 
 	buffer := &bytes.Buffer{}
@@ -39,13 +39,13 @@ func generate(specs map[string]*interfaceSpec, importPath string) error {
 //     {{Method}}Name func({{params...}}) {{results...}}
 // }
 
-func generateInterfaceDefinition(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+func generateInterfaceDefinition(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
 	fields := []jen.Code{}
-	for methodName, method := range interfaceSpec.methods {
+	for methodName, method := range interfaceSpec.spec.methods {
 		fields = append(fields, generateMethodField(
 			methodName,
 			method,
-			importPath,
+			interfaceSpec.importPath,
 		))
 	}
 
@@ -63,12 +63,12 @@ func generateMethodField(methodName string, method *methodSpec, importPath strin
 //
 // var _ {{Interface}} = NewMock{{Interface}}()
 
-func generateTypeTest(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+func generateTypeTest(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
 	constructorName := fmt.Sprintf(constructorFormat, interfaceName)
 
 	file.Var().
 		Id("_").
-		Qual(importPath, interfaceName).
+		Qual(interfaceSpec.importPath, interfaceName).
 		Op("=").
 		Id(constructorName).
 		Call()
@@ -82,14 +82,14 @@ func generateTypeTest(file *jen.File, interfaceName string, interfaceSpec *inter
 //     }
 // }
 
-func generateConstructor(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+func generateConstructor(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
 	structName := fmt.Sprintf(mockFormat, interfaceName)
 	constructorName := fmt.Sprintf(constructorFormat, interfaceName)
 
 	body := jen.Return().
 		Op("&").
 		Id(structName).
-		Values(generateDefaults(interfaceSpec, importPath)...)
+		Values(generateDefaults(interfaceSpec.spec, interfaceSpec.importPath)...)
 
 	file.Func().
 		Id(constructorName).
@@ -136,9 +136,9 @@ func generateDefault(method *methodSpec, methodName, importPath string) *jen.Sta
 //     return m.{{Method}}Func({{params...}})
 // }
 
-func generateMethodImplementations(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
-	for methodName, method := range interfaceSpec.methods {
-		generateMethodImplementation(file, interfaceName, importPath, methodName, method)
+func generateMethodImplementations(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
+	for methodName, method := range interfaceSpec.spec.methods {
+		generateMethodImplementation(file, interfaceName, interfaceSpec.importPath, methodName, method)
 	}
 }
 

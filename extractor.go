@@ -20,6 +20,11 @@ type (
 		results  []types.Type
 		variadic bool
 	}
+
+	wrappedSpec struct {
+		importPath string
+		spec       *interfaceSpec
+	}
 )
 
 func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) map[string]*interfaceSpec {

@@ -8,44 +8,55 @@ import (
 )
 
 var (
-	importPath = kingpin.Arg("path", "").Required().String()
-	interfaces = kingpin.Arg("interfaces", "").Strings()
+	importPaths = kingpin.Arg("path", "").Required().Strings()
+	interfaces  = kingpin.Flag("interfaces", "").Short('i').Strings()
 )
 
 func main() {
 	kingpin.Parse()
 
-	pkg, pkgType, err := parseImportPath(*importPath)
-	if err != nil {
-		abort(err)
+	allSpecs := map[string]*wrappedSpec{}
+	for _, path := range *importPaths {
+		pkg, pkgType, err := parseImportPath(path)
+		if err != nil {
+			abort(err)
+		}
+
+		specs := getInterfaceSpecs(pkg, pkgType)
+		if len(specs) == 0 {
+			abort(fmt.Errorf("no interfaces found in path %s", path))
+		}
+
+		for name, spec := range specs {
+			if shouldInclude(name) {
+				if _, ok := allSpecs[name]; ok {
+					abort(fmt.Errorf("ambiguous interface %s in supplied import paths", name))
+				}
+
+				allSpecs[name] = &wrappedSpec{spec: spec, importPath: path}
+			}
+		}
 	}
 
-	specs := filter(getInterfaceSpecs(pkg, pkgType))
-	if len(specs) == 0 {
-		abort(fmt.Errorf("no interfaces found"))
+	for _, name := range *interfaces {
+		if _, ok := allSpecs[name]; !ok {
+			abort(fmt.Errorf("interface %s not found in supplied import paths", name))
+		}
 	}
 
-	if err := generate(specs, *importPath); err != nil {
+	if err := generate(allSpecs); err != nil {
 		abort(err)
 	}
 }
 
-func filter(specs map[string]*interfaceSpec) map[string]*interfaceSpec {
-	if len(*interfaces) == 0 {
-		return specs
-	}
-
-	filtered := map[string]*interfaceSpec{}
-	for _, name := range *interfaces {
-		spec, ok := specs[name]
-		if !ok {
-			abort(fmt.Errorf("interface %s not found in import path", name))
+func shouldInclude(name string) bool {
+	for _, v := range *interfaces {
+		if v == name {
+			return true
 		}
-
-		filtered[name] = spec
 	}
 
-	return filtered
+	return len(*interfaces) == 0
 }
 
 func abort(err error) {
