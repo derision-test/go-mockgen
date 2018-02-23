@@ -23,9 +23,12 @@ type (
 )
 
 func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) map[string]*interfaceSpec {
-	e := newInterfaceExtractor(pkgType)
-	walk(pkg, e)
-	return e.specs
+	visitor := newInterfaceExtractor(pkgType)
+	for _, file := range pkg.Files {
+		ast.Walk(visitor, file)
+	}
+
+	return visitor.specs
 }
 
 func newInterfaceExtractor(pkg *types.Package) *interfaceExtractor {
@@ -33,6 +36,19 @@ func newInterfaceExtractor(pkg *types.Package) *interfaceExtractor {
 		pkg:   pkg,
 		specs: map[string]*interfaceSpec{},
 	}
+}
+
+func (e *interfaceExtractor) Visit(node ast.Node) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.GenDecl:
+		for _, spec := range n.Specs {
+			if typeSpec, ok := spec.(*ast.TypeSpec); ok {
+				e.visitTypeSpec(typeSpec)
+			}
+		}
+	}
+
+	return e
 }
 
 func (e *interfaceExtractor) visitTypeSpec(typeSpec *ast.TypeSpec) {

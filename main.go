@@ -20,14 +20,12 @@ func main() {
 		abort(err)
 	}
 
-	names := getNames(pkg)
 	specs := filter(getInterfaceSpecs(pkg, pkgType))
-
 	if len(specs) == 0 {
 		abort(fmt.Errorf("no interfaces found"))
 	}
 
-	if err := generate(specs, *importPath, names); err != nil {
+	if err := generate(specs, *importPath); err != nil {
 		abort(err)
 	}
 }

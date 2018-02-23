@@ -3,26 +3,25 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"go/types"
 
 	"github.com/dave/jennifer/jen"
 )
 
-func generate(
-	specs map[string]*interfaceSpec,
-	packageName string,
-	packageNames []string,
-) error {
+const (
+	mockFormat          = "Mock%s"
+	constructorFormat   = "NewMock%s"
+	innerMethodFormat   = "%sFunc"
+	parameterNameFormat = "v%d"
+)
+
+func generate(specs map[string]*interfaceSpec, importPath string) error {
 	file := jen.NewFile("test")
 
 	for name, spec := range specs {
-		generateMock(
-			file,
-			name,
-			spec,
-			packageName,
-			packageNames,
-		)
+		generateInterfaceDefinition(file, name, spec, importPath)
+		generateTypeTest(file, name, spec, importPath)
+		generateConstructor(file, name, spec, importPath)
+		generateMethodImplementations(file, name, spec, importPath)
 	}
 
 	buffer := &bytes.Buffer{}
@@ -34,298 +33,181 @@ func generate(
 	return nil
 }
 
-func generateMock(
-	file *jen.File,
-	interfaceName string,
-	interfaceSpec *interfaceSpec,
-	packageName string,
-	packageNames []string,
-) {
-	var (
-		fields   = []jen.Code{}
-		defaults = []jen.Code{}
-	)
+// generateInterfaceDefinition
+//
+// type Mock{{Interface}} struct {
+//     {{Method}}Name func({{params...}}) {{results...}}
+// }
 
-	for funcName, method := range interfaceSpec.methods {
-		var (
-			params  = []jen.Code{}
-			results = []jen.Code{}
-			zeroes  = []jen.Code{}
-		)
-
-		for i, typ := range method.params {
-			params = append(params, generateType(
-				typ,
-				packageName, packageNames,
-				method.variadic && i == len(method.params)-1,
-			))
-		}
-
-		for _, typ := range method.results {
-			results = append(results, generateType(
-				typ,
-				packageName,
-				packageNames,
-				false,
-			))
-
-			zeroes = append(zeroes, zeroValue(
-				typ,
-				packageName,
-				packageNames,
-			))
-		}
-
-		field := jen.Id(fmt.Sprintf("%sFunc", funcName)).
-			Func().
-			Params(params...).
-			Params(results...)
-
-		fields = append(fields, field)
-
-		var body jen.Code
-		if len(zeroes) != 0 {
-			body = jen.Return().List(zeroes...)
-		}
-
-		zero := jen.Func().Params(params...).Params(results...).Block(body)
-
-		defaultVal := compose(jen.Id(fmt.Sprintf("%sFunc", funcName)).Op(":"), zero)
-
-		defaults = append(defaults, defaultVal)
+func generateInterfaceDefinition(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+	fields := []jen.Code{}
+	for methodName, method := range interfaceSpec.methods {
+		fields = append(fields, generateMethodField(
+			methodName,
+			method,
+			importPath,
+		))
 	}
 
-	file.
-		Type().
-		Id(fmt.Sprintf("Mock%s", interfaceName)).
-		Struct(fields...)
+	file.Type().Id(fmt.Sprintf(mockFormat, interfaceName)).Struct(fields...)
+}
+
+func generateMethodField(methodName string, method *methodSpec, importPath string) *jen.Statement {
+	return jen.Id(fmt.Sprintf(innerMethodFormat, methodName)).
+		Func().
+		Params(generateParams(method, importPath)...).
+		Params(generateResults(method, importPath)...)
+}
+
+// generateTypeTest
+//
+// var _ {{Interface}} = NewMock{{Interface}}()
+
+func generateTypeTest(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+	constructorName := fmt.Sprintf(constructorFormat, interfaceName)
 
 	file.Var().
 		Id("_").
-		Qual(packageName, interfaceName).
+		Qual(importPath, interfaceName).
 		Op("=").
-		Id(fmt.Sprintf("NewMock%s", interfaceName)).
+		Id(constructorName).
 		Call()
+}
 
-	file.
-		Func().
-		Id(fmt.Sprintf("NewMock%s", interfaceName)).
+// generateConstructor
+//
+// func NewMock{{Interface}} *Mock{{Interface}} {
+//     return &Mock{{Interface}}{
+//         {{Method}}Func func({{params...}}) {{results...}} { return {{result-zero-values...}} }
+//     }
+// }
+
+func generateConstructor(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+	structName := fmt.Sprintf(mockFormat, interfaceName)
+	constructorName := fmt.Sprintf(constructorFormat, interfaceName)
+
+	body := jen.Return().
+		Op("&").
+		Id(structName).
+		Values(generateDefaults(interfaceSpec, importPath)...)
+
+	file.Func().
+		Id(constructorName).
 		Params().
-		Op("*").Id(fmt.Sprintf("Mock%s", interfaceName)).
-		Block(jen.Return().
-			Op("&").
-			Id(fmt.Sprintf("Mock%s", interfaceName)).
-			Values(defaults...))
+		Op("*").
+		Id(structName).
+		Block(body)
+}
 
-	for funcName, method := range interfaceSpec.methods {
-		var (
-			names   = []jen.Code{}
-			params  = []jen.Code{}
-			results = []jen.Code{}
+func generateDefaults(interfaceSpec *interfaceSpec, importPath string) []jen.Code {
+	defaults := []jen.Code{}
+	for methodName, method := range interfaceSpec.methods {
+		defaults = append(defaults, generateDefault(method, methodName, importPath))
+	}
 
-			body *jen.Statement
-		)
+	return defaults
+}
 
-		for i, typ := range method.params {
-			variadic := method.variadic && i == len(method.params)-1
-			name := jen.Id(fmt.Sprintf("v%d", i))
-			if variadic {
-				name = name.Op("...")
-			}
+func generateDefault(method *methodSpec, methodName, importPath string) *jen.Statement {
+	zeroes := []jen.Code{}
+	for _, typ := range method.results {
+		zeroes = append(zeroes, zeroValue(
+			typ,
+			importPath,
+		))
+	}
 
-			names = append(names, name)
-			params = append(params, compose(jen.Id(fmt.Sprintf("v%d", i)), generateType(
-				typ,
-				packageName,
-				packageNames,
-				variadic,
-			)))
-		}
+	var body jen.Code
+	if len(zeroes) != 0 {
+		body = jen.Return().List(zeroes...)
+	}
 
-		for _, typ := range method.results {
-			results = append(results, generateType(typ, packageName, packageNames, false))
-		}
+	defaultImpl := jen.Func().
+		Params(generateParams(method, importPath)...).
+		Params(generateResults(method, importPath)...).
+		Block(body)
 
-		if len(method.results) == 0 {
-			body = jen.Id("m").
-				Op(".").
-				Id(fmt.Sprintf("%sFunc", funcName)).
-				Call(names...)
-		} else {
-			body = jen.Return().
-				Id("m").
-				Op(".").
-				Id(fmt.Sprintf("%sFunc", funcName)).
-				Call(names...)
-		}
+	return compose(jen.Id(fmt.Sprintf(innerMethodFormat, methodName)).Op(":"), defaultImpl)
+}
 
-		file.Func().
-			Params(jen.Id("m").
-				Op("*").
-				Id(fmt.Sprintf("Mock%s", interfaceName))).
-			Id(funcName).
-			Params(params...).
-			Params(results...).
-			Block(body)
+// generateMethodImplementations
+//
+// func (m *Mock{{Interface}}) {{Method}}({{params...}}) {{results...}} {
+//     return m.{{Method}}Func({{params...}})
+// }
+
+func generateMethodImplementations(file *jen.File, interfaceName string, interfaceSpec *interfaceSpec, importPath string) {
+	for methodName, method := range interfaceSpec.methods {
+		generateMethodImplementation(file, interfaceName, importPath, methodName, method)
 	}
 }
 
-func generateType(
-	typ types.Type,
-	packageName string,
-	packageNames []string,
-	variadic bool,
-) *jen.Statement {
-	recur := func(typ types.Type) *jen.Statement {
-		return generateType(typ, packageName, packageNames, false)
+func generateMethodImplementation(file *jen.File, interfaceName string, importPath, methodName string, method *methodSpec) {
+	names := []jen.Code{}
+	for i := range method.params {
+		names = append(names, jen.Id(fmt.Sprintf(parameterNameFormat, i)))
 	}
 
-	switch t := typ.(type) {
-	case *types.Basic:
-		return jen.Id(typ.String())
-
-	case *types.Chan:
-		if t.Dir() == types.RecvOnly {
-			return compose(jen.Op("<-").Chan(), recur(t.Elem()))
-		}
-
-		if t.Dir() == types.SendOnly {
-			return compose(jen.Chan().Op("<-"), recur(t.Elem()))
-		}
-
-		return compose(jen.Chan(), recur(t.Elem()))
-
-	case *types.Interface:
-		methods := []jen.Code{}
-		for i := 0; i < t.NumMethods(); i++ {
-			method := t.Method(i)
-			methods = append(methods, compose(jen.Id(method.Name()), recur(method.Type())))
-		}
-
-		return jen.Interface(methods...)
-
-	case *types.Map:
-		return compose(jen.Map(recur(t.Key())), recur(t.Elem()))
-
-	case *types.Named:
-		name := t.String()
-		if stringInSlice(name, packageNames) {
-			name = fmt.Sprintf("%s.%s", packageName, name)
-		}
-
-		if importPath, local := decomposePackage(name); importPath != "" {
-			return jen.Qual(importPath, local)
-		}
-
-		return jen.Id(name)
-
-	case *types.Pointer:
-		return compose(jen.Op("*"), recur(t.Elem()))
-
-	case *types.Slice:
-		var prefix = jen.Index()
-		if variadic {
-			prefix = jen.Op("...")
-		}
-
-		return compose(prefix, recur(t.Elem()))
-
-	case *types.Struct:
-		fields := []jen.Code{}
-		for i := 0; i < t.NumFields(); i++ {
-			field := t.Field(i)
-			fields = append(fields, compose(jen.Id(field.Name()), recur(field.Type())))
-		}
-
-		return jen.Struct(fields...)
-
-	case *types.Signature:
-		params := []jen.Code{}
-		for i := 0; i < t.Params().Len(); i++ {
-			typ := t.Params().At(i)
-			params = append(params, compose(jen.Id(typ.Name()), recur(typ.Type())))
-		}
-
-		results := []jen.Code{}
-		for i := 0; i < t.Results().Len(); i++ {
-			results = append(results, recur(t.Results().At(i).Type()))
-		}
-
-		return jen.Func().Params(params...).Params(results...)
-
-	default:
-		panic(fmt.Sprintf("unsupported case: %#v\n", typ))
+	params := generateParams(method, importPath)
+	for i, param := range params {
+		params[i] = compose(jen.Id(fmt.Sprintf(parameterNameFormat, i)), param)
 	}
+
+	receiver := jen.Id("m").
+		Op("*").
+		Id(fmt.Sprintf(mockFormat, interfaceName))
+
+	file.Func().
+		Params(receiver).
+		Id(methodName).
+		Params(params...).
+		Params(generateResults(method, importPath)...).
+		Block(generateFunctionBody(methodName, method, names))
 }
 
-func zeroValue(
-	typ types.Type,
-	packageName string,
-	packageNames []string,
-) *jen.Statement {
-	switch t := typ.(type) {
-	case *types.Basic:
-		kind := t.Kind()
+func generateFunctionBody(methodName string, method *methodSpec, names []jen.Code) *jen.Statement {
+	body := jen.Id("m").
+		Op(".").
+		Id(fmt.Sprintf(innerMethodFormat, methodName)).
+		Call(names...)
 
-		if kind == types.Bool {
-			return jen.False()
-		} else if kind == types.String {
-			return jen.Lit("")
-		} else if isIntegerType(kind) {
-			return jen.Lit(0)
-		}
-
-	case *types.Named:
-		switch t.Underlying().(type) {
-		case *types.Struct:
-			path := t.Obj().Pkg().Path()
-			if path == "" {
-				path = packageName
-			}
-
-			return jen.Qual(path, t.Obj().Name()).Block()
-		default:
-			return zeroValue(t.Underlying(), packageName, packageNames)
-		}
-
-	case *types.Struct:
-		return generateType(typ, packageName, packageNames, false).Block()
+	if len(method.results) == 0 {
+		return body
 	}
 
-	return jen.Nil()
+	return compose(jen.Return(), body)
 }
 
-func isIntegerType(kind types.BasicKind) bool {
-	kinds := []types.BasicKind{
-		types.Int,
-		types.Int8,
-		types.Int16,
-		types.Int32,
-		types.Int64,
-		types.Uint,
-		types.Uint8,
-		types.Uint16,
-		types.Uint32,
-		types.Uint64,
-		types.Uintptr,
-		types.Float32,
-		types.Float64,
-		types.Byte,
-		types.Rune,
-		types.Complex64,
-		types.Complex128,
+//
+// Common Helpers
+
+func generateParams(method *methodSpec, importPath string) []jen.Code {
+	params := []jen.Code{}
+	for i, typ := range method.params {
+		params = append(params, generateType(
+			typ,
+			importPath,
+			method.variadic && i == len(method.params)-1,
+		))
 	}
 
-	for _, k := range kinds {
-		if k == kind {
-			return true
-		}
-	}
-
-	return false
+	return params
 }
 
-func compose(stmt1, stmt2 *jen.Statement) *jen.Statement {
+func generateResults(method *methodSpec, importPath string) []jen.Code {
+	results := []jen.Code{}
+	for _, typ := range method.results {
+		results = append(results, generateType(
+			typ,
+			importPath,
+			false,
+		))
+	}
+
+	return results
+}
+
+func compose(stmt1 *jen.Statement, stmt2 jen.Code) *jen.Statement {
 	composed := append(*stmt1, stmt2)
 	return &composed
 }
