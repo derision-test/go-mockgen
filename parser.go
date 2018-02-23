@@ -17,14 +17,14 @@ import (
 var (
 	fset       = token.NewFileSet()
 	typeConfig = types.Config{
-		Importer: importer.Default(),
+		Importer: importer.For("source", nil),
 	}
 )
 
-func parseDir(name string) (*ast.Package, *types.Package, error) {
-	pkgs, err := parser.ParseDir(fset, filepath.Join(gopath(), "src", name), fileFilter, 0)
+func parseImportPath(path string) (*ast.Package, *types.Package, error) {
+	pkgs, err := parser.ParseDir(fset, filepath.Join(gopath(), "src", path), fileFilter, 0)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not import package %s (%s)", name, err.Error())
+		return nil, nil, fmt.Errorf("could not import package %s (%s)", path, err.Error())
 	}
 
 	files := []*ast.File{}
@@ -36,14 +36,14 @@ func parseDir(name string) (*ast.Package, *types.Package, error) {
 
 	pkgType, err := typeConfig.Check("", fset, files, nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not import package %s (%s)", name, err.Error())
+		return nil, nil, fmt.Errorf("could not import package %s (%s)", path, err.Error())
 	}
 
 	if pkg := getFirst(pkgs); pkg != nil {
 		return pkg, pkgType, nil
 	}
 
-	return nil, nil, fmt.Errorf("could not import package %s", name)
+	return nil, nil, fmt.Errorf("could not import package %s", path)
 }
 
 func gopath() string {

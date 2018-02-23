@@ -8,6 +8,12 @@ type nameExtractor struct {
 	names []string
 }
 
+func getNames(pkg *ast.Package) []string {
+	e := newNameExtractor()
+	walk(pkg, e)
+	return e.names
+}
+
 func newNameExtractor() *nameExtractor {
 	return &nameExtractor{
 		names: []string{},
