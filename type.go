@@ -144,6 +144,10 @@ func isIntegerType(kind types.BasicKind) bool {
 func generateQualifiedName(t *types.Named, importPath string) *jen.Statement {
 	name := t.Obj().Name()
 
+	if t.Obj().Pkg() == nil {
+		return jen.Id(name)
+	}
+
 	if path := t.Obj().Pkg().Path(); path != "" {
 		return jen.Qual(path, name)
 	}
