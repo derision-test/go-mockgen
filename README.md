@@ -1,6 +1,41 @@
 # go-mockgen
 
-Coming Soon!
+A mock interface code generator.
+
+## Installation
+
+Simply run `go get -u github.com/efritz/go-mockgen/...`.
+
+### Usage
+
+As an example, we generate a mock implementation for the Retry interface in
+the [watchdog](https://github.com/efritz/watchdog) library. After running
+the command ```go-mockgen github.com/efritz/watchdog Retry```, the following
+code is generated and printed to standard out.
+
+```
+package test
+
+import watchdog "github.com/efritz/watchdog"
+
+type MockRetry struct {
+	RetryFunc func() bool
+}
+
+var _ watchdog.Retry = NewMockRetry()
+
+func NewMockRetry() *MockRetry {
+	return &MockRetry{RetryFunc: func() bool {
+		return false
+	}}
+}
+func (m *MockRetry) Retry() bool {
+	return m.RetryFunc()
+}
+```
+
+If no interface (or list of interfaces) are given after the import name, a mock
+for every exported interface defined in that package is mocked.
 
 ## License
 
