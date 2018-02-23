@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"path"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -14,23 +16,89 @@ const (
 	parameterNameFormat = "v%d"
 )
 
-func generate(specs map[string]*wrappedSpec, pkgName string) error {
-	file := jen.NewFile(pkgName)
+func generate(specs map[string]*wrappedSpec, pkgName, dirname, filename string) error {
+	if dirname != "" && filename == "" {
+		return generateMultipleFiles(specs, pkgName, dirname)
+	}
+
+	return generateOneFile(specs, pkgName, path.Join(dirname, filename))
+}
+
+func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname string) error {
+	paths := []string{}
+	for name := range specs {
+		paths = append(paths, getFilename(dirname, name))
+	}
+
+	conflict, err := anyPathExists(paths)
+	if err != nil {
+		return err
+	}
+
+	if conflict != "" {
+		return fmt.Errorf("filename %s already exists", conflict)
+	}
 
 	for name, spec := range specs {
-		generateInterfaceDefinition(file, name, spec)
-		generateTypeTest(file, name, spec)
-		generateConstructor(file, name, spec)
-		generateMethodImplementations(file, name, spec)
+		content, err := generateContent(map[string]*wrappedSpec{name: spec}, pkgName)
+		if err != nil {
+			return err
+		}
+
+		if err := writeFile(getFilename(dirname, name), content); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func generateOneFile(specs map[string]*wrappedSpec, pkgName, filename string) error {
+	content, err := generateContent(specs, pkgName)
+	if err != nil {
+		return err
+	}
+
+	if filename != "" {
+		exists, err := pathExists(filename)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			return fmt.Errorf("filename %s already exists", filename)
+		}
+
+		return writeFile(filename, content)
+	}
+
+	fmt.Printf("%s\n", content)
+	return nil
+}
+
+func generateContent(specs map[string]*wrappedSpec, pkgName string) (string, error) {
+	file := jen.NewFile(pkgName)
+	for name, spec := range specs {
+		generateFile(file, name, spec)
 	}
 
 	buffer := &bytes.Buffer{}
 	if err := file.Render(buffer); err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Printf("%s\n", buffer.String())
-	return nil
+	return buffer.String(), nil
+}
+
+func writeFile(filename, content string) error {
+	return ioutil.WriteFile(filename, []byte(content), 0644)
+}
+
+func generateFile(file *jen.File, name string, spec *wrappedSpec) {
+	generateInterfaceDefinition(file, name, spec)
+	generateTypeTest(file, name, spec)
+	generateConstructor(file, name, spec)
+	generateMethodImplementations(file, name, spec)
 }
 
 // generateInterfaceDefinition
