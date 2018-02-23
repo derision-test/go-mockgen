@@ -9,6 +9,7 @@ import (
 
 var (
 	importPaths = kingpin.Arg("path", "").Required().Strings()
+	pkgName     = kingpin.Flag("package", "").Short('p').Required().String()
 	interfaces  = kingpin.Flag("interfaces", "").Short('i').Strings()
 )
 
@@ -44,7 +45,7 @@ func main() {
 		}
 	}
 
-	if err := generate(allSpecs); err != nil {
+	if err := generate(allSpecs, *pkgName); err != nil {
 		abort(err)
 	}
 }

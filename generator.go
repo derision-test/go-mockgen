@@ -14,8 +14,8 @@ const (
 	parameterNameFormat = "v%d"
 )
 
-func generate(specs map[string]*wrappedSpec) error {
-	file := jen.NewFile("test")
+func generate(specs map[string]*wrappedSpec, pkgName string) error {
+	file := jen.NewFile(pkgName)
 
 	for name, spec := range specs {
 		generateInterfaceDefinition(file, name, spec)
