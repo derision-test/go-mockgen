@@ -145,7 +145,13 @@ func generateMethodImplementations(file *jen.File, interfaceName string, interfa
 func generateMethodImplementation(file *jen.File, interfaceName string, importPath, methodName string, method *methodSpec) {
 	names := []jen.Code{}
 	for i := range method.params {
-		names = append(names, jen.Id(fmt.Sprintf(parameterNameFormat, i)))
+		name := jen.Id(fmt.Sprintf(parameterNameFormat, i))
+
+		if method.variadic && i == len(method.params)-1 {
+			name = name.Op("...")
+		}
+
+		names = append(names, name)
 	}
 
 	params := generateParams(method, importPath)
