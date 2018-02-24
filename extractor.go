@@ -62,7 +62,7 @@ func shouldInclude(name string, interfaces []string) bool {
 		}
 	}
 
-	return len(*Interfaces) == 0
+	return len(interfaces) == 0
 }
 
 func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) map[string]*interfaceSpec {

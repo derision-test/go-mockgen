@@ -8,18 +8,18 @@ func main() {
 		abort(err)
 	}
 
-	allSpecs, err := getSpecs(*ImportPaths, *Interfaces)
+	allSpecs, err := getSpecs(*importPaths, *interfaces)
 	if err != nil {
 		abort(err)
 	}
 
-	for _, name := range *Interfaces {
+	for _, name := range *interfaces {
 		if _, ok := allSpecs[name]; !ok {
 			abort(fmt.Errorf("interface %s not found in supplied import paths", name))
 		}
 	}
 
-	if *ListOnly {
+	if *listOnly {
 		for _, name := range getNames(allSpecs) {
 			fmt.Printf("%s\n", name)
 		}
@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 
-	if err := generate(allSpecs, *PkgName, *Prefix, dirname, filename, *Force); err != nil {
+	if err := generate(allSpecs, *pkgName, *prefix, dirname, filename, *force); err != nil {
 		abort(err)
 	}
 }

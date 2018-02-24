@@ -2,46 +2,55 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path"
 	"regexp"
 
 	"github.com/alecthomas/kingpin"
 )
 
+const Version = "0.1.0"
+
 var (
-	ImportPaths    = kingpin.Arg("path", "").Required().Strings()
-	PkgName        = kingpin.Flag("package", "").Short('p').String()
-	Prefix         = kingpin.Flag("prefix", "").String()
-	Interfaces     = kingpin.Flag("interfaces", "").Short('i').Strings()
-	OutputFilename = kingpin.Flag("filename", "").Short('o').String()
-	OutputDir      = kingpin.Flag("dirname", "").Short('d').String()
-	Force          = kingpin.Flag("force", "").Short('f').Bool()
-	ListOnly       = kingpin.Flag("list", "").Bool()
+	app = kingpin.New("go-mockgen", "go-mockgen generates mock implementations from interface definitions.").Version(Version)
+
+	importPaths    = app.Arg("path", "The import paths used to search for eligible interfaces").Required().Strings()
+	pkgName        = app.Flag("package", "The name of the generated package. Is the name of target directory if dirname or filename is supplied by default.").Short('p').String()
+	prefix         = app.Flag("prefix", "A prefix used in the name of each mock struct. Should be TitleCase by convention.").String()
+	interfaces     = app.Flag("interfaces", "A whitelist of interfaces to generate given the import paths.").Short('i').Strings()
+	outputFilename = app.Flag("filename", "The target output file. All mocks are writen to this file.").Short('o').String()
+	outputDir      = app.Flag("dirname", "The target output directory. Each mock will be written to a unique file.").Short('d').String()
+	force          = app.Flag("force", "Do not abort if a write to disk would overwrite an existing file.").Short('f').Bool()
+	listOnly       = app.Flag("list", "Dry run - print the interfaces found in the given import paths.").Bool()
 )
 
 var identPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*[A-Za-z])?$")
 
 func parseArgs() (string, string, error) {
-	kingpin.Parse()
+	args := os.Args[1:]
 
-	dirname, filename, err := validateOutputPath(*OutputDir, *OutputFilename)
+	if _, err := app.Parse(args); err != nil {
+		return "", "", err
+	}
+
+	dirname, filename, err := validateOutputPath(*outputDir, *outputFilename)
 	if err != nil {
 		return "", "", err
 	}
 
-	if *PkgName == "" && !*ListOnly {
+	if *pkgName == "" && !*listOnly {
 		if dirname == "" {
 			kingpin.Fatalf("could not infer package, try --help")
 		}
 
-		*PkgName = path.Base(dirname)
+		*pkgName = path.Base(dirname)
 	}
 
-	if !identPattern.Match([]byte(*PkgName)) {
+	if !identPattern.Match([]byte(*pkgName)) {
 		kingpin.Fatalf("illegal package name supplied, try --help")
 	}
 
-	if *Prefix != "" && !identPattern.Match([]byte(*Prefix)) {
+	if *prefix != "" && !identPattern.Match([]byte(*prefix)) {
 		kingpin.Fatalf("illegal prefix supplied, try --help")
 	}
 
