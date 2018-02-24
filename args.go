@@ -10,6 +10,7 @@ import (
 var (
 	ImportPaths    = kingpin.Arg("path", "").Required().Strings()
 	PkgName        = kingpin.Flag("package", "").Short('p').String()
+	Prefix         = kingpin.Flag("prefix", "").String()
 	Interfaces     = kingpin.Flag("interfaces", "").Short('i').Strings()
 	OutputDir      = kingpin.Flag("dirname", "").Short('d').String()
 	OutputFilename = kingpin.Flag("filename", "").Short('o').String()

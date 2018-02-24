@@ -27,7 +27,7 @@ func main() {
 		return
 	}
 
-	if err := generate(allSpecs, *PkgName, dirname, filename, *Force); err != nil {
+	if err := generate(allSpecs, *PkgName, *Prefix, dirname, filename, *Force); err != nil {
 		abort(err)
 	}
 }

@@ -12,25 +12,25 @@ import (
 )
 
 const (
-	mockFormat          = "Mock%s"
-	constructorFormat   = "NewMock%s"
+	mockFormat          = "Mock%s%s"
+	constructorFormat   = "NewMock%s%s"
 	innerMethodFormat   = "%sFunc"
 	parameterNameFormat = "v%d"
 )
 
-func generate(specs map[string]*wrappedSpec, pkgName, dirname, filename string, force bool) error {
+func generate(specs map[string]*wrappedSpec, pkgName, prefix, dirname, filename string, force bool) error {
 	if dirname != "" && filename == "" {
-		return generateMultipleFiles(specs, pkgName, dirname, force)
+		return generateMultipleFiles(specs, pkgName, prefix, dirname, force)
 	}
 
-	return generateOneFile(specs, pkgName, path.Join(dirname, filename), force)
+	return generateOneFile(specs, pkgName, prefix, path.Join(dirname, filename), force)
 }
 
-func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname string, force bool) error {
+func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, prefix, dirname string, force bool) error {
 	if !force {
 		paths := []string{}
 		for name := range specs {
-			paths = append(paths, getFilename(dirname, name))
+			paths = append(paths, getFilename(dirname, name, prefix))
 		}
 
 		conflict, err := anyPathExists(paths)
@@ -44,12 +44,12 @@ func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname strin
 	}
 
 	for name, spec := range specs {
-		content, err := generateContent(map[string]*wrappedSpec{name: spec}, pkgName)
+		content, err := generateContent(map[string]*wrappedSpec{name: spec}, pkgName, prefix)
 		if err != nil {
 			return err
 		}
 
-		if err := writeFile(getFilename(dirname, name), content); err != nil {
+		if err := writeFile(getFilename(dirname, name, prefix), content); err != nil {
 			return err
 		}
 	}
@@ -57,8 +57,8 @@ func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname strin
 	return nil
 }
 
-func generateOneFile(specs map[string]*wrappedSpec, pkgName, filename string, force bool) error {
-	content, err := generateContent(specs, pkgName)
+func generateOneFile(specs map[string]*wrappedSpec, pkgName, prefix, filename string, force bool) error {
+	content, err := generateContent(specs, pkgName, prefix)
 	if err != nil {
 		return err
 	}
@@ -80,10 +80,10 @@ func generateOneFile(specs map[string]*wrappedSpec, pkgName, filename string, fo
 	return nil
 }
 
-func generateContent(specs map[string]*wrappedSpec, pkgName string) (string, error) {
+func generateContent(specs map[string]*wrappedSpec, pkgName, prefix string) (string, error) {
 	file := jen.NewFile(pkgName)
 	for _, name := range getNames(specs) {
-		generateFile(file, name, specs[name])
+		generateFile(file, name, prefix, specs[name])
 	}
 
 	buffer := &bytes.Buffer{}
@@ -98,8 +98,13 @@ func writeFile(filename, content string) error {
 	return ioutil.WriteFile(filename, []byte(content), 0644)
 }
 
-func getFilename(dirname, interfaceName string) string {
-	return path.Join(dirname, fmt.Sprintf("%s_mock.go", strings.ToLower(interfaceName)))
+func getFilename(dirname, interfaceName, prefix string) string {
+	filename := fmt.Sprintf("%s_mock.go", interfaceName)
+	if prefix != "" {
+		filename = fmt.Sprintf("%s_%s", prefix, filename)
+	}
+
+	return path.Join(dirname, strings.ToLower(filename))
 }
 
 func pathExists(path string) (bool, error) {
@@ -132,11 +137,11 @@ func anyPathExists(paths []string) (string, error) {
 //
 // Code Generation
 
-func generateFile(file *jen.File, name string, spec *wrappedSpec) {
-	generateInterfaceDefinition(file, name, spec)
-	generateTypeTest(file, name, spec)
-	generateConstructor(file, name, spec)
-	generateMethodImplementations(file, name, spec)
+func generateFile(file *jen.File, name, prefix string, spec *wrappedSpec) {
+	generateInterfaceDefinition(file, name, prefix, spec)
+	generateTypeTest(file, name, prefix, spec)
+	generateConstructor(file, name, prefix, spec)
+	generateMethodImplementations(file, name, prefix, spec)
 }
 
 // generateInterfaceDefinition
@@ -145,7 +150,7 @@ func generateFile(file *jen.File, name string, spec *wrappedSpec) {
 //     {{Method}}Name func({{params...}}) {{results...}}
 // }
 
-func generateInterfaceDefinition(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
+func generateInterfaceDefinition(file *jen.File, interfaceName, prefix string, interfaceSpec *wrappedSpec) {
 	fields := []jen.Code{}
 	for methodName, method := range interfaceSpec.spec.methods {
 		fields = append(fields, generateMethodField(
@@ -155,7 +160,7 @@ func generateInterfaceDefinition(file *jen.File, interfaceName string, interface
 		))
 	}
 
-	file.Type().Id(fmt.Sprintf(mockFormat, interfaceName)).Struct(fields...)
+	file.Type().Id(fmt.Sprintf(mockFormat, prefix, interfaceName)).Struct(fields...)
 }
 
 func generateMethodField(methodName string, method *methodSpec, importPath string) *jen.Statement {
@@ -169,8 +174,8 @@ func generateMethodField(methodName string, method *methodSpec, importPath strin
 //
 // var _ {{Interface}} = NewMock{{Interface}}()
 
-func generateTypeTest(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
-	constructorName := fmt.Sprintf(constructorFormat, interfaceName)
+func generateTypeTest(file *jen.File, interfaceName, prefix string, interfaceSpec *wrappedSpec) {
+	constructorName := fmt.Sprintf(constructorFormat, prefix, interfaceName)
 
 	file.Var().
 		Id("_").
@@ -193,9 +198,9 @@ func stripVendor(path string) string {
 //     }
 // }
 
-func generateConstructor(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
-	structName := fmt.Sprintf(mockFormat, interfaceName)
-	constructorName := fmt.Sprintf(constructorFormat, interfaceName)
+func generateConstructor(file *jen.File, interfaceName, prefix string, interfaceSpec *wrappedSpec) {
+	structName := fmt.Sprintf(mockFormat, prefix, interfaceName)
+	constructorName := fmt.Sprintf(constructorFormat, prefix, interfaceName)
 
 	body := jen.Return().
 		Op("&").
@@ -247,13 +252,13 @@ func generateDefault(method *methodSpec, methodName, importPath string) *jen.Sta
 //     return m.{{Method}}Func({{params...}})
 // }
 
-func generateMethodImplementations(file *jen.File, interfaceName string, interfaceSpec *wrappedSpec) {
+func generateMethodImplementations(file *jen.File, interfaceName, prefix string, interfaceSpec *wrappedSpec) {
 	for methodName, method := range interfaceSpec.spec.methods {
-		generateMethodImplementation(file, interfaceName, interfaceSpec.importPath, methodName, method)
+		generateMethodImplementation(file, interfaceName, prefix, interfaceSpec.importPath, methodName, method)
 	}
 }
 
-func generateMethodImplementation(file *jen.File, interfaceName string, importPath, methodName string, method *methodSpec) {
+func generateMethodImplementation(file *jen.File, interfaceName, prefix string, importPath, methodName string, method *methodSpec) {
 	names := []jen.Code{}
 	for i := range method.params {
 		name := jen.Id(fmt.Sprintf(parameterNameFormat, i))
@@ -272,7 +277,7 @@ func generateMethodImplementation(file *jen.File, interfaceName string, importPa
 
 	receiver := jen.Id("m").
 		Op("*").
-		Id(fmt.Sprintf(mockFormat, interfaceName))
+		Id(fmt.Sprintf(mockFormat, prefix, interfaceName))
 
 	file.Func().
 		Params(receiver).
