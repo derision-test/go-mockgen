@@ -13,7 +13,8 @@ var (
 	PkgName        = kingpin.Flag("package", "").Short('p').Required().String()
 	Interfaces     = kingpin.Flag("interfaces", "").Short('i').Strings()
 	OutputDir      = kingpin.Flag("dirname", "").Short('d').String()
-	OutputFilename = kingpin.Flag("filename", "").Short('f').String()
+	OutputFilename = kingpin.Flag("filename", "").Short('o').String()
+	Force          = kingpin.Flag("force", "").Short('f').Bool()
 )
 
 func main() {
@@ -57,7 +58,7 @@ func main() {
 		}
 	}
 
-	if err := generate(allSpecs, *PkgName, dirname, filename); err != nil {
+	if err := generate(allSpecs, *PkgName, dirname, filename, *Force); err != nil {
 		abort(err)
 	}
 }

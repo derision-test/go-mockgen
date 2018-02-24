@@ -16,27 +16,29 @@ const (
 	parameterNameFormat = "v%d"
 )
 
-func generate(specs map[string]*wrappedSpec, pkgName, dirname, filename string) error {
+func generate(specs map[string]*wrappedSpec, pkgName, dirname, filename string, force bool) error {
 	if dirname != "" && filename == "" {
-		return generateMultipleFiles(specs, pkgName, dirname)
+		return generateMultipleFiles(specs, pkgName, dirname, force)
 	}
 
-	return generateOneFile(specs, pkgName, path.Join(dirname, filename))
+	return generateOneFile(specs, pkgName, path.Join(dirname, filename), force)
 }
 
-func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname string) error {
-	paths := []string{}
-	for name := range specs {
-		paths = append(paths, getFilename(dirname, name))
-	}
+func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname string, force bool) error {
+	if !force {
+		paths := []string{}
+		for name := range specs {
+			paths = append(paths, getFilename(dirname, name))
+		}
 
-	conflict, err := anyPathExists(paths)
-	if err != nil {
-		return err
-	}
+		conflict, err := anyPathExists(paths)
+		if err != nil {
+			return err
+		}
 
-	if conflict != "" {
-		return fmt.Errorf("filename %s already exists", conflict)
+		if conflict != "" {
+			return fmt.Errorf("filename %s already exists", conflict)
+		}
 	}
 
 	for name, spec := range specs {
@@ -53,13 +55,13 @@ func generateMultipleFiles(specs map[string]*wrappedSpec, pkgName, dirname strin
 	return nil
 }
 
-func generateOneFile(specs map[string]*wrappedSpec, pkgName, filename string) error {
+func generateOneFile(specs map[string]*wrappedSpec, pkgName, filename string, force bool) error {
 	content, err := generateContent(specs, pkgName)
 	if err != nil {
 		return err
 	}
 
-	if filename != "" {
+	if filename != "" && !force {
 		exists, err := pathExists(filename)
 		if err != nil {
 			return err
