@@ -111,6 +111,10 @@ func (e *interfaceExtractor) visitTypeSpec(typeSpec *ast.TypeSpec) {
 }
 
 func (e *interfaceExtractor) getInterfaceObject(typeSpec *ast.TypeSpec, scope *types.Scope) *types.Interface {
+	if !typeSpec.Name.IsExported() {
+		return nil
+	}
+
 	_, obj := scope.Innermost(typeSpec.Pos()).LookupParent(typeSpec.Name.Name, 0)
 
 	switch t := obj.Type().Underlying().(type) {
