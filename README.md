@@ -6,14 +6,14 @@ A mock interface code generator.
 
 Simply run `go get -u github.com/efritz/go-mockgen/...`.
 
-### Usage
+## Binary Usage
 
 As an example, we generate a mock implementation for the Retry interface in
 the [watchdog](https://github.com/efritz/watchdog) library. After running
 the command ```go-mockgen github.com/efritz/watchdog Retry```, the following
 code is generated and printed to standard out.
 
-```
+```go
 package test
 
 import watchdog "github.com/efritz/watchdog"
@@ -36,6 +36,32 @@ func (m *MockRetry) Retry() bool {
 
 If no interface (or list of interfaces) are given after the import name, a mock
 for every exported interface defined in that package is mocked.
+
+## Mock Usage
+
+Each mock can be initialized via the no-argument constructor. This is a valid
+implementation of the mocked interface that returns zero values on every function
+call. For testing, you may want to force it to return a particular value or log
+the context under which it was called. This is trivial, as each function delegates
+to a struct value that can be overwritten on a per-test basis. This allows the
+method to be monkeypatched in-line, allowing it to capture values from your test.
+
+The following (stripped) example from [reception](https://github.com/efritz/reception)
+uses this pattern to mock a connection to Zookeeper, returning an error when attempting
+to create an ephemeral znode.
+
+```go
+func (s *ZkSuite) TestRegisterError(t sweet.T) {
+	conn := NewMockZkConn()
+	conn.CreateEphemeralFunc = func(path string, data []byte) error {
+		return zk.ErrUnknown
+	}
+
+	client := newZkClient(conn)
+	err := client.Register(&Service{}, nil)
+	Expect(err).To(Equal(zk.ErrUnknown))
+}
+```
 
 ## License
 
