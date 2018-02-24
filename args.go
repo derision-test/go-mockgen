@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path"
+	"regexp"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -18,17 +19,33 @@ var (
 	ListOnly       = kingpin.Flag("list", "").Bool()
 )
 
+var identPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*[A-Za-z])?$")
+
 func parseArgs() (string, string, error) {
 	kingpin.Parse()
 
-	if *PkgName == "" && !*ListOnly {
-		kingpin.Fatalf("required flag --package not provided, try --help")
+	dirname, filename, err := validateOutputPath(*OutputDir, *OutputFilename)
+	if err != nil {
+		return "", "", err
 	}
 
-	return validateOutputPath(
-		*OutputDir,
-		*OutputFilename,
-	)
+	if *PkgName == "" && !*ListOnly {
+		if dirname == "" {
+			kingpin.Fatalf("could not infer package, try --help")
+		}
+
+		*PkgName = path.Base(dirname)
+	}
+
+	if !identPattern.Match([]byte(*PkgName)) {
+		kingpin.Fatalf("illegal package name supplied, try --help")
+	}
+
+	if *Prefix != "" && !identPattern.Match([]byte(*Prefix)) {
+		kingpin.Fatalf("illegal prefix supplied, try --help")
+	}
+
+	return dirname, filename, nil
 }
 
 func validateOutputPath(dirname, filename string) (string, string, error) {

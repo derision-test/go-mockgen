@@ -104,7 +104,7 @@ func getFilename(dirname, interfaceName, prefix string) string {
 		filename = fmt.Sprintf("%s_%s", prefix, filename)
 	}
 
-	return path.Join(dirname, strings.ToLower(filename))
+	return path.Join(dirname, strings.Replace(strings.ToLower(filename), "-", "_", -1))
 }
 
 func pathExists(path string) (bool, error) {
