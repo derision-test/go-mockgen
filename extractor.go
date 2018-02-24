@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 )
@@ -26,6 +27,43 @@ type (
 		spec       *interfaceSpec
 	}
 )
+
+func getSpecs(importPaths []string, interfaces []string) (map[string]*wrappedSpec, error) {
+	allSpecs := map[string]*wrappedSpec{}
+	for _, path := range importPaths {
+		pkg, pkgType, err := parseImportPath(path)
+		if err != nil {
+			abort(err)
+		}
+
+		specs := getInterfaceSpecs(pkg, pkgType)
+		if len(specs) == 0 {
+			return nil, fmt.Errorf("no interfaces found in path %s", path)
+		}
+
+		for name, spec := range specs {
+			if shouldInclude(name, interfaces) {
+				if _, ok := allSpecs[name]; ok {
+					return nil, fmt.Errorf("ambiguous interface %s in supplied import paths", name)
+				}
+
+				allSpecs[name] = &wrappedSpec{spec: spec, importPath: path}
+			}
+		}
+	}
+
+	return allSpecs, nil
+}
+
+func shouldInclude(name string, interfaces []string) bool {
+	for _, v := range interfaces {
+		if v == name {
+			return true
+		}
+	}
+
+	return len(*Interfaces) == 0
+}
 
 func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) map[string]*interfaceSpec {
 	visitor := newInterfaceExtractor(pkgType)

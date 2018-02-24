@@ -2,12 +2,28 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path"
-	"strings"
 
 	"github.com/alecthomas/kingpin"
 )
+
+var (
+	ImportPaths    = kingpin.Arg("path", "").Required().Strings()
+	PkgName        = kingpin.Flag("package", "").Short('p').String()
+	Interfaces     = kingpin.Flag("interfaces", "").Short('i').Strings()
+	OutputDir      = kingpin.Flag("dirname", "").Short('d').String()
+	OutputFilename = kingpin.Flag("filename", "").Short('o').String()
+	Force          = kingpin.Flag("force", "").Short('f').Bool()
+)
+
+func parseArgs() (string, string, error) {
+	kingpin.Parse()
+
+	return validateOutputPath(
+		*OutputDir,
+		*OutputFilename,
+	)
+}
 
 func validateOutputPath(dirname, filename string) (string, string, error) {
 	if dirname == "" && filename == "" {
@@ -32,35 +48,4 @@ func validateOutputPath(dirname, filename string) (string, string, error) {
 	}
 
 	return dirname, filename, nil
-}
-
-func getFilename(dirname, interfaceName string) string {
-	return path.Join(dirname, fmt.Sprintf("%s_mock.go", strings.ToLower(interfaceName)))
-}
-
-func pathExists(path string) (bool, error) {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			err = nil
-		}
-
-		return false, err
-	}
-
-	return true, nil
-}
-
-func anyPathExists(paths []string) (string, error) {
-	for _, path := range paths {
-		exists, err := pathExists(path)
-		if err != nil {
-			return "", err
-		}
-
-		if exists {
-			return path, nil
-		}
-	}
-
-	return "", nil
 }

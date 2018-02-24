@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -81,8 +82,8 @@ func generateOneFile(specs map[string]*wrappedSpec, pkgName, filename string, fo
 
 func generateContent(specs map[string]*wrappedSpec, pkgName string) (string, error) {
 	file := jen.NewFile(pkgName)
-	for name, spec := range specs {
-		generateFile(file, name, spec)
+	for _, name := range getNames(specs) {
+		generateFile(file, name, specs[name])
 	}
 
 	buffer := &bytes.Buffer{}
@@ -96,6 +97,40 @@ func generateContent(specs map[string]*wrappedSpec, pkgName string) (string, err
 func writeFile(filename, content string) error {
 	return ioutil.WriteFile(filename, []byte(content), 0644)
 }
+
+func getFilename(dirname, interfaceName string) string {
+	return path.Join(dirname, fmt.Sprintf("%s_mock.go", strings.ToLower(interfaceName)))
+}
+
+func pathExists(path string) (bool, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			err = nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
+func anyPathExists(paths []string) (string, error) {
+	for _, path := range paths {
+		exists, err := pathExists(path)
+		if err != nil {
+			return "", err
+		}
+
+		if exists {
+			return path, nil
+		}
+	}
+
+	return "", nil
+}
+
+//
+// Code Generation
 
 func generateFile(file *jen.File, name string, spec *wrappedSpec) {
 	generateInterfaceDefinition(file, name, spec)
