@@ -10,8 +10,8 @@ Simply run `go get -u github.com/efritz/go-mockgen/...`.
 
 As an example, we generate a mock implementation for the Retry interface in
 the [watchdog](https://github.com/efritz/watchdog) library. After running
-the command ```go-mockgen github.com/efritz/watchdog Retry```, the following
-code is generated and printed to standard out.
+the command ```go-mockgen github.com/efritz/watchdog -i Retry```, the
+following code is generated and printed to standard out.
 
 ```go
 package test
@@ -34,8 +34,17 @@ func (m *MockRetry) Retry() bool {
 }
 ```
 
-If no interface (or list of interfaces) are given after the import name, a mock
-for every exported interface defined in that package is mocked.
+If no interfaces are given, a mock for every exported interface defined in
+that package is generated.
+
+The suggested way to generate mocks for a project is to use go-generate.
+
+```go
+package foo
+
+//go:generate go-mockgen github.com/efritz/watchdog -i Retry -f watchdog_mock.go
+//go:generate go-mockgen github.com/efritz/overcurrent -f overcurrent_mock.go
+```
 
 ## Mock Usage
 
