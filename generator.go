@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/dave/jennifer/jen"
 )
@@ -138,10 +139,15 @@ func generateTypeTest(file *jen.File, interfaceName string, interfaceSpec *wrapp
 
 	file.Var().
 		Id("_").
-		Qual(interfaceSpec.importPath, interfaceName).
+		Qual(stripVendor(interfaceSpec.importPath), interfaceName).
 		Op("=").
 		Id(constructorName).
 		Call()
+}
+
+func stripVendor(path string) string {
+	parts := strings.Split(path, "/vendor/")
+	return parts[len(parts)-1]
 }
 
 // generateConstructor
