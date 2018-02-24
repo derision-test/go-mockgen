@@ -14,10 +14,15 @@ var (
 	OutputDir      = kingpin.Flag("dirname", "").Short('d').String()
 	OutputFilename = kingpin.Flag("filename", "").Short('o').String()
 	Force          = kingpin.Flag("force", "").Short('f').Bool()
+	ListOnly       = kingpin.Flag("list", "").Bool()
 )
 
 func parseArgs() (string, string, error) {
 	kingpin.Parse()
+
+	if *PkgName == "" && !*ListOnly {
+		kingpin.Fatalf("required flag --package not provided, try --help")
+	}
 
 	return validateOutputPath(
 		*OutputDir,

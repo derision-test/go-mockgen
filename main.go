@@ -19,6 +19,14 @@ func main() {
 		}
 	}
 
+	if *ListOnly {
+		for _, name := range getNames(allSpecs) {
+			fmt.Printf("%s\n", name)
+		}
+
+		return
+	}
+
 	if err := generate(allSpecs, *PkgName, dirname, filename, *Force); err != nil {
 		abort(err)
 	}
