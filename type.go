@@ -149,8 +149,8 @@ func generateQualifiedName(t *types.Named, importPath string) *jen.Statement {
 	}
 
 	if path := t.Obj().Pkg().Path(); path != "" {
-		return jen.Qual(path, name)
+		return jen.Qual(stripVendor(path), name)
 	}
 
-	return jen.Qual(importPath, name)
+	return jen.Qual(stripVendor(importPath), name)
 }

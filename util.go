@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 )
 
 func abort(err error) {
@@ -19,4 +20,9 @@ func getNames(specs map[string]*wrappedSpec) []string {
 
 	sort.Strings(names)
 	return names
+}
+
+func stripVendor(path string) string {
+	parts := strings.Split(path, "/vendor/")
+	return parts[len(parts)-1]
 }

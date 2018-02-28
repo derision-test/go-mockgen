@@ -185,11 +185,6 @@ func generateTypeTest(file *jen.File, interfaceName, prefix string, interfaceSpe
 		Call()
 }
 
-func stripVendor(path string) string {
-	parts := strings.Split(path, "/vendor/")
-	return parts[len(parts)-1]
-}
-
 // generateConstructor
 //
 // func NewMock{{Interface}} *Mock{{Interface}} {
