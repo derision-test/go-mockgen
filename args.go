@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 
 	"github.com/alecthomas/kingpin"
@@ -67,7 +68,17 @@ func validateOutputPath(dirname, filename string) (string, string, error) {
 			kingpin.Fatalf("dirname and filename are mutually exclusive, try --help")
 		}
 
+		filename, err := filepath.Abs(filename)
+		if err != nil {
+			return "", "", err
+		}
+
 		dirname, filename = path.Dir(filename), path.Base(filename)
+	}
+
+	dirname, err := filepath.Abs(dirname)
+	if err != nil {
+		return "", "", err
 	}
 
 	exists, err := pathExists(dirname)
