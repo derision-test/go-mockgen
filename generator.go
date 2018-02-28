@@ -63,13 +63,13 @@ func generateOneFile(specs map[string]*wrappedSpec, pkgName, prefix, filename st
 		return err
 	}
 
-	if filename != "" && !force {
+	if filename != "" {
 		exists, err := pathExists(filename)
 		if err != nil {
 			return err
 		}
 
-		if exists {
+		if exists && !force {
 			return fmt.Errorf("filename %s already exists", filename)
 		}
 
