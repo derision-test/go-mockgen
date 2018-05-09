@@ -87,7 +87,7 @@ func zeroValue(typ types.Type, importPath string) *jen.Statement {
 		}
 
 	case *types.Named:
-		if _, ok := t.Underlying().(*types.Struct); ok {
+		if shouldEmitNamedType(t) {
 			return compose(generateQualifiedName(t, importPath), jen.Block())
 		}
 
@@ -98,6 +98,18 @@ func zeroValue(typ types.Type, importPath string) *jen.Statement {
 	}
 
 	return jen.Nil()
+}
+
+func shouldEmitNamedType(t *types.Named) bool {
+	if _, ok := t.Underlying().(*types.Struct); ok {
+		return true
+	}
+
+	if _, ok := t.Underlying().(*types.Array); ok {
+		return true
+	}
+
+	return false
 }
 
 //
