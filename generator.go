@@ -82,6 +82,10 @@ func generateOneFile(specs map[string]*wrappedSpec, pkgName, prefix, filename st
 
 func generateContent(specs map[string]*wrappedSpec, pkgName, prefix string) (string, error) {
 	file := jen.NewFile(pkgName)
+	file.HeaderComment("DO NOT EDIT")
+	file.HeaderComment("Code generated automatically by github.com/efritz/go-mockgen")
+	file.HeaderComment(fmt.Sprintf("$ %s", strings.Join(os.Args, " ")))
+
 	for _, name := range getNames(specs) {
 		generateFile(file, name, prefix, specs[name])
 	}
