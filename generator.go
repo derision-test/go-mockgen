@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/build"
 	"io/ioutil"
 	"os"
 	"path"
@@ -19,6 +20,17 @@ const (
 )
 
 func generate(specs map[string]*wrappedSpec, pkgName, prefix, dirname, filename string, force bool) error {
+	importPath, err := inferImportPath(dirname)
+	if err != nil {
+		return err
+	}
+
+	for _, spec := range specs {
+		if spec.importPath == importPath {
+			spec.importPath = ""
+		}
+	}
+
 	if dirname != "" && filename == "" {
 		return generateMultipleFiles(specs, pkgName, prefix, dirname, force)
 	}
@@ -301,6 +313,20 @@ func generateFunctionBody(methodName string, method *methodSpec, names []jen.Cod
 
 //
 // Common Helpers
+
+func inferImportPath(path string) (string, error) {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
+
+	if strings.HasPrefix(path, gopath) {
+		// gopath + /src/
+		return path[len(gopath)+5:], nil
+	}
+
+	return "", fmt.Errorf("destination is outside $GOPATH")
+}
 
 func generateParams(method *methodSpec, importPath string) []jen.Code {
 	params := []jen.Code{}
