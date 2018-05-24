@@ -158,6 +158,7 @@ func generateFile(file *jen.File, name, prefix string, spec *wrappedSpec) {
 	generateTypeTest(file, name, prefix, spec)
 	generateConstructor(file, name, prefix, spec)
 	generateMethodImplementations(file, name, prefix, spec)
+	generateDefaultMethodImplementations(file, name, prefix, spec)
 }
 
 // generateInterfaceDefinition
@@ -204,57 +205,37 @@ func generateTypeTest(file *jen.File, interfaceName, prefix string, interfaceSpe
 // generateConstructor
 //
 // func NewMock{{Interface}} *Mock{{Interface}} {
-//     return &Mock{{Interface}}{
-//         {{Method}}Func func({{params...}}) {{results...}} { return {{result-zero-values...}} }
-//     }
+//     m := &Mock{{Interface}}{}
+//     m.{{Method}}Func = m.default{{Method}}Func
+//     return m
 // }
 
 func generateConstructor(file *jen.File, interfaceName, prefix string, interfaceSpec *wrappedSpec) {
 	structName := fmt.Sprintf(mockFormat, prefix, interfaceName)
 	constructorName := fmt.Sprintf(constructorFormat, prefix, interfaceName)
 
-	body := jen.Return().
-		Op("&").
-		Id(structName).
-		Values(generateDefaults(interfaceSpec.spec, interfaceSpec.importPath)...)
+	defaults := []jen.Code{}
+	for name := range interfaceSpec.spec.methods {
+		assignment := jen.Id("m").
+			Dot(fmt.Sprintf("%sFunc", name)).
+			Op("=").
+			Id("m").
+			Dot(fmt.Sprintf("default%sFunc", name))
+
+		defaults = append(defaults, assignment)
+	}
+
+	body := []jen.Code{}
+	body = append(body, jen.Id("m").Op(":=").Op("&").Id(structName).Values())
+	body = append(body, defaults...)
+	body = append(body, jen.Return().Id("m"))
 
 	file.Func().
 		Id(constructorName).
 		Params().
 		Op("*").
 		Id(structName).
-		Block(body)
-}
-
-func generateDefaults(interfaceSpec *interfaceSpec, importPath string) []jen.Code {
-	defaults := []jen.Code{}
-	for methodName, method := range interfaceSpec.methods {
-		defaults = append(defaults, generateDefault(method, methodName, importPath))
-	}
-
-	return defaults
-}
-
-func generateDefault(method *methodSpec, methodName, importPath string) *jen.Statement {
-	zeroes := []jen.Code{}
-	for _, typ := range method.results {
-		zeroes = append(zeroes, zeroValue(
-			typ,
-			importPath,
-		))
-	}
-
-	var body jen.Code
-	if len(zeroes) != 0 {
-		body = jen.Return().List(zeroes...)
-	}
-
-	defaultImpl := jen.Func().
-		Params(generateParams(method, importPath)...).
-		Params(generateResults(method, importPath)...).
-		Block(body)
-
-	return compose(jen.Id(fmt.Sprintf(innerMethodFormat, methodName)).Op(":"), defaultImpl)
+		Block(body...)
 }
 
 // generateMethodImplementations
@@ -295,10 +276,10 @@ func generateMethodImplementation(file *jen.File, interfaceName, prefix string, 
 		Id(methodName).
 		Params(params...).
 		Params(generateResults(method, importPath)...).
-		Block(generateFunctionBody(methodName, method, names))
+		Block(generateMethodBody(methodName, method, names))
 }
 
-func generateFunctionBody(methodName string, method *methodSpec, names []jen.Code) *jen.Statement {
+func generateMethodBody(methodName string, method *methodSpec, names []jen.Code) *jen.Statement {
 	body := jen.Id("m").
 		Op(".").
 		Id(fmt.Sprintf(innerMethodFormat, methodName)).
@@ -309,6 +290,59 @@ func generateFunctionBody(methodName string, method *methodSpec, names []jen.Cod
 	}
 
 	return compose(jen.Return(), body)
+}
+
+// generateDefaultMethodImplementations
+//
+// func (m *Mock{{Interface}}) default{{Method}}({{params...}}) {{results...}} {
+//     return {{result-zero-values...}}
+// }
+
+func generateDefaultMethodImplementations(file *jen.File, interfaceName, prefix string, interfaceSpec *wrappedSpec) {
+	for methodName, method := range interfaceSpec.spec.methods {
+		generateDefaultMethodImplementation(file, interfaceName, prefix, interfaceSpec.importPath, fmt.Sprintf("default%sFunc", methodName), method)
+	}
+}
+
+func generateDefaultMethodImplementation(file *jen.File, interfaceName, prefix string, importPath, methodName string, method *methodSpec) {
+	names := []jen.Code{}
+	for i := range method.params {
+		name := jen.Id(fmt.Sprintf(parameterNameFormat, i))
+
+		if method.variadic && i == len(method.params)-1 {
+			name = name.Op("...")
+		}
+
+		names = append(names, name)
+	}
+
+	params := generateParams(method, importPath)
+	for i, param := range params {
+		params[i] = compose(jen.Id(fmt.Sprintf(parameterNameFormat, i)), param)
+	}
+
+	receiver := jen.Id("m").
+		Op("*").
+		Id(fmt.Sprintf(mockFormat, prefix, interfaceName))
+
+	file.Func().
+		Params(receiver).
+		Id(methodName).
+		Params(params...).
+		Params(generateResults(method, importPath)...).
+		Block(generateDefaultMethodBody(methodName, method, importPath))
+}
+
+func generateDefaultMethodBody(methodName string, method *methodSpec, importPath string) jen.Code {
+	zeroes := []jen.Code{}
+	for _, typ := range method.results {
+		zeroes = append(zeroes, zeroValue(
+			typ,
+			importPath,
+		))
+	}
+
+	return jen.Return().List(zeroes...)
 }
 
 //
