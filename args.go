@@ -87,7 +87,9 @@ func validateOutputPath(dirname, filename string) (string, string, error) {
 	}
 
 	if !exists {
-		return "", "", fmt.Errorf("directory %s does not exist", dirname)
+		if err := os.MkdirAll(dirname, os.ModeDir|os.ModePerm); err != nil {
+			return "", "", fmt.Errorf("failed to make output directory %s: %s", dirname, err.Error())
+		}
 	}
 
 	return dirname, filename, nil
