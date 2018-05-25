@@ -150,7 +150,7 @@ func (s *ZkSuite) TestRegisterError(t sweet.T) {
     err := client.Register(&Service{Name: "s", ID: "1234"}, nil)
     Expect(err).To(Equal(zk.ErrUnknown))
     Expect(conn.CreateEphemeralFuncCallCount).To(Equal(1))
-    Expect(conn.CreateEphemeralFuncParams[0].Arg0).To(Equal("s-1234"))
+    Expect(conn.CreateEphemeralFuncCallParams[0].Arg0).To(Equal("s-1234"))
 }
 ```
 
