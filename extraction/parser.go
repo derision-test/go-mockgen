@@ -1,9 +1,8 @@
-package main
+package extraction
 
 import (
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/importer"
 	"go/parser"
 	"go/token"
@@ -12,17 +11,24 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/efritz/go-mockgen/paths"
 )
 
-var (
-	fset       = token.NewFileSet()
-	typeConfig = types.Config{
-		Importer: importer.For("source", nil),
+type pathParser struct {
+	fset       *token.FileSet
+	typeConfig types.Config
+}
+
+func newPathParser() *pathParser {
+	return &pathParser{
+		fset:       token.NewFileSet(),
+		typeConfig: types.Config{Importer: importer.For("source", nil)},
 	}
-)
+}
 
-func parseImportPath(path string) (*ast.Package, *types.Package, error) {
-	pkgs, err := parser.ParseDir(fset, filepath.Join(gopath(), "src", path), fileFilter, 0)
+func (p *pathParser) parse(path string) (*ast.Package, *types.Package, error) {
+	pkgs, err := parser.ParseDir(p.fset, filepath.Join(paths.Gopath(), "src", path), fileFilter, 0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not import package %s (%s)", path, err.Error())
 	}
@@ -34,7 +40,7 @@ func parseImportPath(path string) (*ast.Package, *types.Package, error) {
 		}
 	}
 
-	pkgType, err := typeConfig.Check("", fset, files, nil)
+	pkgType, err := p.typeConfig.Check("", p.fset, files, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not import package %s (%s)", path, err.Error())
 	}
@@ -43,15 +49,7 @@ func parseImportPath(path string) (*ast.Package, *types.Package, error) {
 		return pkg, pkgType, nil
 	}
 
-	return nil, nil, fmt.Errorf("could not import package %s", path)
-}
-
-func gopath() string {
-	if gopath := os.Getenv("GOPATH"); gopath != "" {
-		return gopath
-	}
-
-	return build.Default.GOPATH
+	return nil, nil, fmt.Errorf("could not import package %s (no results)", path)
 }
 
 func fileFilter(info os.FileInfo) bool {

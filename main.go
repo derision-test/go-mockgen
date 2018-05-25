@@ -1,33 +1,46 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/efritz/go-mockgen/extraction"
+	"github.com/efritz/go-mockgen/generation"
+)
+
+const Version = "0.1.0"
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Printf("error: %s\n", err.Error())
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	dirname, filename, err := parseArgs()
 	if err != nil {
-		abort(err)
+		return err
 	}
 
-	allSpecs, err := getSpecs(*importPaths, *interfaces)
+	allSpecs, err := extraction.Extract(*importPaths, *interfaces)
 	if err != nil {
-		abort(err)
+		return err
 	}
 
 	for _, name := range *interfaces {
 		if _, ok := allSpecs[name]; !ok {
-			abort(fmt.Errorf("interface %s not found in supplied import paths", name))
+			return fmt.Errorf("interface %s not found in supplied import paths", name)
 		}
 	}
 
 	if *listOnly {
-		for _, name := range getNames(allSpecs) {
+		for _, name := range allSpecs.Names() {
 			fmt.Printf("%s\n", name)
 		}
 
-		return
+		return nil
 	}
 
-	if err := generate(allSpecs, *pkgName, *prefix, dirname, filename, *force); err != nil {
-		abort(err)
-	}
+	return generation.Generate(allSpecs, *pkgName, *prefix, dirname, filename, *force)
 }

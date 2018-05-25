@@ -8,9 +8,9 @@ import (
 	"regexp"
 
 	"github.com/alecthomas/kingpin"
-)
 
-const Version = "0.1.0"
+	"github.com/efritz/go-mockgen/paths"
+)
 
 var (
 	app = kingpin.New("go-mockgen", "go-mockgen generates mock implementations from interface definitions.").Version(Version)
@@ -63,11 +63,11 @@ func validateOutputPath(dirname, filename string) (string, string, error) {
 		return "", "", nil
 	}
 
-	if filename != "" {
-		if dirname != "" {
-			kingpin.Fatalf("dirname and filename are mutually exclusive, try --help")
-		}
+	if filename != "" && dirname != "" {
+		kingpin.Fatalf("dirname and filename are mutually exclusive, try --help")
+	}
 
+	if filename != "" {
 		filename, err := filepath.Abs(filename)
 		if err != nil {
 			return "", "", err
@@ -81,15 +81,8 @@ func validateOutputPath(dirname, filename string) (string, string, error) {
 		return "", "", err
 	}
 
-	exists, err := pathExists(dirname)
-	if err != nil {
-		return "", "", err
-	}
-
-	if !exists {
-		if err := os.MkdirAll(dirname, os.ModeDir|os.ModePerm); err != nil {
-			return "", "", fmt.Errorf("failed to make output directory %s: %s", dirname, err.Error())
-		}
+	if err := paths.EnsureDirExists(dirname); err != nil {
+		return "", "", fmt.Errorf("failed to make output directory %s: %s", dirname, err.Error())
 	}
 
 	return dirname, filename, nil
