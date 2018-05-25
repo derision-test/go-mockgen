@@ -19,23 +19,76 @@ $ go-mockgen github.com/efritz/watchdog -i Retry -d .
 ```
 
 ```go
+// DO NOT EDIT
+// Code generated automatically by github.com/efritz/go-mockgen
+
 package example
 
-import watchdog "github.com/efritz/watchdog"
+import reception "github.com/efritz/reception"
 
-type MockRetry struct {
-    RetryFunc func() bool
+type MockClient struct {
+	NewWatcherFunc             func(string) reception.Watcher
+	NewWatcherFuncCallCount    int
+	NewWatcherFuncCallParams   []ClientNewWatcherParamSet
+	RegisterFunc               func(*reception.Service, func(error)) error
+	RegisterFuncCallCount      int
+	RegisterFuncCallParams     []ClientRegisterParamSet
+	ListServicesFunc           func(string) ([]*reception.Service, error)
+	ListServicesFuncCallCount  int
+	ListServicesFuncCallParams []ClientListServicesParamSet
 }
 
-var _ watchdog.Retry = NewMockRetry()
-
-func NewMockRetry() *MockRetry {
-    return &MockRetry{RetryFunc: func() bool {
-        return false
-    }}
+type ClientRegisterParamSet struct {
+	Arg0 *reception.Service
+	Arg1 func(error)
 }
-func (m *MockRetry) Retry() bool {
-    return m.RetryFunc()
+
+type ClientListServicesParamSet struct {
+	Arg0 string
+}
+
+type ClientNewWatcherParamSet struct {
+	Arg0 string
+}
+
+var _ reception.Client = NewMockClient()
+
+func NewMockClient() *MockClient {
+	m := &MockClient{}
+	m.RegisterFunc = m.defaultRegisterFunc
+	m.ListServicesFunc = m.defaultListServicesFunc
+	m.NewWatcherFunc = m.defaultNewWatcherFunc
+	return m
+}
+
+func (m *MockClient) ListServices(v0 string) ([]*reception.Service, error) {
+	m.ListServicesFuncCallCount++
+	m.ListServicesFuncCallParams = append(m.ListServicesFuncCallParams, ClientListServicesParamSet{v0})
+	return m.ListServicesFunc(v0)
+}
+
+func (m *MockClient) NewWatcher(v0 string) reception.Watcher {
+	m.NewWatcherFuncCallCount++
+	m.NewWatcherFuncCallParams = append(m.NewWatcherFuncCallParams, ClientNewWatcherParamSet{v0})
+	return m.NewWatcherFunc(v0)
+}
+
+func (m *MockClient) Register(v0 *reception.Service, v1 func(error)) error {
+	m.RegisterFuncCallCount++
+	m.RegisterFuncCallParams = append(m.RegisterFuncCallParams, ClientRegisterParamSet{v0, v1})
+	return m.RegisterFunc(v0, v1)
+}
+
+func (m *MockClient) defaultRegisterFunc(v0 *reception.Service, v1 func(error)) error {
+	return nil
+}
+
+func (m *MockClient) defaultListServicesFunc(v0 string) ([]*reception.Service, error) {
+	return nil, nil
+}
+
+func (m *MockClient) defaultNewWatcherFunc(v0 string) reception.Watcher {
+	return nil
 }
 ```
 
@@ -94,8 +147,10 @@ func (s *ZkSuite) TestRegisterError(t sweet.T) {
     }
 
     client := newZkClient(conn)
-    err := client.Register(&Service{}, nil)
+    err := client.Register(&Service{Name: "s", ID: "1234"}, nil)
     Expect(err).To(Equal(zk.ErrUnknown))
+    Expect(conn.CreateEphemeralFuncCallCount).To(Equal(1))
+    Expect(conn.CreateEphemeralFuncParams[0].Arg0).To(Equal("s-1234"))
 }
 ```
 
