@@ -12,6 +12,7 @@ const (
 	mockFormat          = "Mock%s%s"
 	constructorFormat   = "NewMock%s%s"
 	innerMethodFormat   = "%sFunc"
+	callCountFormat     = "%sFuncCallCount"
 	defaultMethodFormat = "default%sFunc"
 	parameterNameFormat = "v%d"
 )
@@ -65,13 +66,17 @@ func (g *interfaceGenerator) generateInterfaceDefinition() {
 
 	for name, method := range g.spec.Spec.Methods {
 		var (
-			methodName = fmt.Sprintf(innerMethodFormat, name)
-			params     = generateParams(method, g.spec.ImportPath)
-			results    = generateResults(method, g.spec.ImportPath)
+			methodName    = fmt.Sprintf(innerMethodFormat, name)
+			callCountName = fmt.Sprintf(callCountFormat, name)
+			params        = generateParams(method, g.spec.ImportPath)
+			results       = generateResults(method, g.spec.ImportPath)
 		)
 
 		// {{Method}}Name func({{params...}}) {{results...}}
 		fields = append(fields, jen.Id(methodName).Func().Params(params...).Params(results...))
+
+		// {{Method}}NameCallCOunt int
+		fields = append(fields, jen.Id(callCountName).Id("int"))
 	}
 
 	// type Mock{{Interface}} struct { [fields] }
@@ -143,7 +148,7 @@ func (g *interfaceGenerator) generateMethodImplementation(name string, method *s
 	}
 
 	// func (m *Mock{{Interface}}) {{Method}}({{params...}}) {{results...}} { [body] }
-	g.file.Func().Params(jen.Id("m").Op("*").Id(structName)).Id(name).Params(params...).Params(results...).Block(body)
+	g.file.Func().Params(jen.Id("m").Op("*").Id(structName)).Id(name).Params(params...).Params(results...).Block(body...)
 }
 
 func (g *interfaceGenerator) generateParameterNames(method *specs.MethodSpec) []jen.Code {
@@ -161,18 +166,24 @@ func (g *interfaceGenerator) generateParameterNames(method *specs.MethodSpec) []
 	return names
 }
 
-func (g *interfaceGenerator) generateMethodBody(name string, method *specs.MethodSpec, names []jen.Code) *jen.Statement {
-	methodName := fmt.Sprintf(innerMethodFormat, name)
+func (g *interfaceGenerator) generateMethodBody(name string, method *specs.MethodSpec, names []jen.Code) []jen.Code {
+	var (
+		methodName    = fmt.Sprintf(innerMethodFormat, name)
+		callCountName = fmt.Sprintf(callCountFormat, name)
+	)
+
+	// m.{{Method}}FuncCallCount++
+	incr := jen.Id("m").Dot(callCountName).Op("++")
 
 	// m.{{Method}}Func({{params...}})
-	body := jen.Id("m").Op(".").Id(methodName).Call(names...)
+	dispatch := jen.Id("m").Dot(methodName).Call(names...)
 
 	if len(method.Results) != 0 {
-		// return [body]
-		body = compose(jen.Return(), body)
+		// return [dispatch]
+		dispatch = compose(jen.Return(), dispatch)
 	}
 
-	return body
+	return []jen.Code{incr, dispatch}
 }
 
 //
