@@ -1,5 +1,10 @@
 # go-mockgen
 
+[![GoDoc](https://godoc.org/github.com/efritz/go-mockgen?status.svg)](https://godoc.org/github.com/efritz/go-mockgen)
+[![Build Status](https://secure.travis-ci.org/efritz/go-mockgen.png)](http://travis-ci.org/efritz/go-mockgen)
+[![Maintainability](https://api.codeclimate.com/v1/badges/8546037d609e215de82d/maintainability)](https://codeclimate.com/github/efritz/go-mockgen/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/8546037d609e215de82d/test_coverage)](https://codeclimate.com/github/efritz/go-mockgen/test_coverage)
+
 A mock interface code generator.
 
 ## Installation
