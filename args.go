@@ -19,7 +19,7 @@ var (
 	pkgName        = app.Flag("package", "The name of the generated package. Is the name of target directory if dirname or filename is supplied by default.").Short('p').String()
 	prefix         = app.Flag("prefix", "A prefix used in the name of each mock struct. Should be TitleCase by convention.").String()
 	interfaces     = app.Flag("interfaces", "A whitelist of interfaces to generate given the import paths.").Short('i').Strings()
-	outputFilename = app.Flag("filename", "The target output file. All mocks are writen to this file.").Short('o').String()
+	outputFilename = app.Flag("filename", "The target output file. All mocks are written to this file.").Short('o').String()
 	outputDir      = app.Flag("dirname", "The target output directory. Each mock will be written to a unique file.").Short('d').String()
 	force          = app.Flag("force", "Do not abort if a write to disk would overwrite an existing file.").Short('f').Bool()
 	listOnly       = app.Flag("list", "Dry run - print the interfaces found in the given import paths.").Bool()
