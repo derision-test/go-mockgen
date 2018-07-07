@@ -20,7 +20,11 @@ func Extract(importPaths []string, interfaces []string) (specs.Specs, error) {
 			return nil, err
 		}
 
-		interfaceSpecs := getInterfaceSpecs(pkg, pkgType)
+		interfaceSpecs, err := getInterfaceSpecs(pkg, pkgType)
+		if err != nil {
+			return nil, err
+		}
+
 		if len(interfaceSpecs) == 0 {
 			return nil, fmt.Errorf("no interfaces found in path %s", path)
 		}
@@ -44,13 +48,13 @@ func Extract(importPaths []string, interfaces []string) (specs.Specs, error) {
 	return allSpecs, nil
 }
 
-func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) specs.InterfaceSpecs {
+func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) (specs.InterfaceSpecs, error) {
 	visitor := newVisitor(pkgType)
 	for _, file := range pkg.Files {
 		ast.Walk(visitor, file)
 	}
 
-	return visitor.specs
+	return visitor.specs, visitor.err
 }
 
 func shouldInclude(name string, interfaces []string) bool {

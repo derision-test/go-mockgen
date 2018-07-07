@@ -1,8 +1,10 @@
 package extraction
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"github.com/efritz/go-mockgen/specs"
 )
@@ -10,6 +12,7 @@ import (
 type visitor struct {
 	pkg   *types.Package
 	specs specs.InterfaceSpecs
+	err   error
 }
 
 func newVisitor(pkg *types.Package) *visitor {
@@ -24,7 +27,9 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.GenDecl:
 		for _, spec := range n.Specs {
 			if typeSpec, ok := spec.(*ast.TypeSpec); ok {
-				v.visitTypeSpec(typeSpec)
+				if err := v.visitTypeSpec(typeSpec); err != nil && v.err == nil {
+					v.err = err
+				}
 			}
 		}
 	}
@@ -32,27 +37,35 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	return v
 }
 
-func (v *visitor) visitTypeSpec(typeSpec *ast.TypeSpec) {
+func (v *visitor) visitTypeSpec(typeSpec *ast.TypeSpec) error {
 	typ := v.getInterfaceObject(typeSpec, v.pkg.Scope())
 	if typ == nil {
-		return
+		return nil
 	}
 
 	methods := specs.MethodSpecs{}
 	for i := 0; i < typ.NumMethods(); i++ {
-		methods[typ.Method(i).Name()] = deconstructMethod(typ.Method(i).Type().(*types.Signature))
+		method := typ.Method(i)
+
+		if !method.Exported() {
+			return fmt.Errorf(
+				"interface %s contains unexported method %s",
+				typeSpec.Name,
+				typ.Method(i).Name())
+		}
+
+		methods[method.Name()] = deconstructMethod(method.Type().(*types.Signature))
 	}
 
-	v.specs[typeSpec.Name.Name] = &specs.InterfaceSpec{
+	spec := &specs.InterfaceSpec{
 		Methods: methods,
 	}
+
+	v.specs[title(typeSpec.Name.Name)] = spec
+	return nil
 }
 
 func (v *visitor) getInterfaceObject(typeSpec *ast.TypeSpec, scope *types.Scope) *types.Interface {
-	if !typeSpec.Name.IsExported() {
-		return nil
-	}
-
 	_, obj := scope.Innermost(typeSpec.Pos()).LookupParent(typeSpec.Name.Name, 0)
 
 	switch t := obj.Type().Underlying().(type) {
@@ -84,4 +97,12 @@ func deconstructMethod(signature *types.Signature) *specs.MethodSpec {
 		Results:  results,
 		Variadic: signature.Variadic(),
 	}
+}
+
+func title(s string) string {
+	if s == "" {
+		return s
+	}
+
+	return strings.ToUpper(string(s[0])) + s[1:]
 }
