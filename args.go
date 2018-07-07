@@ -47,12 +47,14 @@ func parseArgs() (string, string, error) {
 		*pkgName = path.Base(dirname)
 	}
 
-	if !identPattern.Match([]byte(*pkgName)) {
-		kingpin.Fatalf("illegal package name supplied, try --help")
-	}
+	if !*listOnly {
+		if !identPattern.Match([]byte(*pkgName)) {
+			kingpin.Fatalf("illegal package name supplied, try --help")
+		}
 
-	if *prefix != "" && !identPattern.Match([]byte(*prefix)) {
-		kingpin.Fatalf("illegal prefix supplied, try --help")
+		if *prefix != "" && !identPattern.Match([]byte(*prefix)) {
+			kingpin.Fatalf("illegal prefix supplied, try --help")
+		}
 	}
 
 	return dirname, filename, nil
