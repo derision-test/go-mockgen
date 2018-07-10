@@ -62,7 +62,12 @@ func parseArgs() (string, string, error) {
 
 func validateOutputPath(dirname, filename string) (string, string, error) {
 	if dirname == "" && filename == "" {
-		return "", "", nil
+		dirname, err := os.Getwd()
+		if err != nil {
+			return "", "", fmt.Errorf("Could not get current directory")
+		}
+
+		return dirname, "", nil
 	}
 
 	if filename != "" && dirname != "" {
