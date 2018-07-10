@@ -57,11 +57,19 @@ func (v *visitor) visitTypeSpec(typeSpec *ast.TypeSpec) error {
 		methods[method.Name()] = deconstructMethod(method.Type().(*types.Signature))
 	}
 
+	var (
+		name      = typeSpec.Name.Name
+		titleName = title(name)
+		lowerName = strings.ToLower(name)
+	)
+
 	spec := &specs.InterfaceSpec{
-		Methods: methods,
+		Name:      name,
+		TitleName: titleName,
+		Methods:   methods,
 	}
 
-	v.specs[title(typeSpec.Name.Name)] = spec
+	v.specs[lowerName] = spec
 	return nil
 }
 

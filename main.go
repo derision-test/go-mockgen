@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/efritz/go-mockgen/extraction"
 	"github.com/efritz/go-mockgen/generation"
@@ -28,18 +29,18 @@ func run() error {
 		return err
 	}
 
-	for _, name := range *interfaces {
-		if _, ok := allSpecs[name]; !ok {
-			return fmt.Errorf("interface %s not found in supplied import paths", name)
-		}
-	}
-
 	if *listOnly {
 		for _, name := range allSpecs.Names() {
 			fmt.Printf("%s\n", name)
 		}
 
 		return nil
+	}
+
+	for _, name := range *interfaces {
+		if _, ok := allSpecs[strings.ToLower(name)]; !ok {
+			return fmt.Errorf("interface %s not found in supplied import paths", name)
+		}
 	}
 
 	return generation.Generate(allSpecs, *pkgName, *prefix, dirname, filename, *force)

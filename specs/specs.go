@@ -12,7 +12,9 @@ type (
 	}
 
 	InterfaceSpec struct {
-		Methods MethodSpecs
+		Name      string
+		TitleName string
+		Methods   MethodSpecs
 	}
 
 	MethodSpec struct {
@@ -28,8 +30,8 @@ type (
 
 func (s Specs) Names() []string {
 	names := []string{}
-	for name := range s {
-		names = append(names, name)
+	for _, spec := range s {
+		names = append(names, spec.Spec.Name)
 	}
 
 	sort.Strings(names)

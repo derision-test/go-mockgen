@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"github.com/efritz/go-mockgen/specs"
 )
@@ -59,7 +60,7 @@ func getInterfaceSpecs(pkg *ast.Package, pkgType *types.Package) (specs.Interfac
 
 func shouldInclude(name string, interfaces []string) bool {
 	for _, v := range interfaces {
-		if v == name {
+		if strings.ToLower(v) == strings.ToLower(name) {
 			return true
 		}
 	}

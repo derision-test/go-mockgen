@@ -17,11 +17,13 @@ func generateContent(allSpecs specs.Specs, pkgName, prefix string) (string, erro
 	file.HeaderComment(fmt.Sprintf("$ %s", strings.Join(os.Args, " ")))
 
 	for _, name := range allSpecs.Names() {
+		spec := allSpecs[strings.ToLower(name)]
+
 		generator := newInterfaceGenerator(
 			file,
-			name,
+			spec.Spec.TitleName,
 			prefix,
-			allSpecs[name],
+			spec,
 		)
 
 		generator.generate()
