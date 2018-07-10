@@ -52,7 +52,6 @@ func (g *interfaceGenerator) generate() {
 	fns := []func(){
 		g.generateInterfaceDefinition,
 		g.generateParamSetDefinitions,
-		g.generateTypeTest,
 		g.generateConstructor,
 		g.generateMethodImplementations,
 		g.generateDefaultMethodImplementations,
@@ -125,19 +124,6 @@ func (g *interfaceGenerator) generateParamSetDefinition(name string, method *spe
 
 	// type {{Interface}}{{Method}}FuncParamSet struct { [fields] }
 	g.file.Type().Id(structName).Struct(fields...)
-}
-
-//
-// Type Test
-
-func (g *interfaceGenerator) generateTypeTest() {
-	var (
-		pkgName  = stripVendor(g.spec.ImportPath)
-		ctorName = fmt.Sprintf(constructorFormat, g.prefix, g.name)
-	)
-
-	// var _ {{Interface}} = NewMock{{Interface}}()
-	g.file.Var().Id("_").Qual(pkgName, g.name).Op("=").Id(ctorName).Call()
 }
 
 //
