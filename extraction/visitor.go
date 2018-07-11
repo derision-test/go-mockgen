@@ -1,7 +1,6 @@
 package extraction
 
 import (
-	"fmt"
 	"go/ast"
 	"go/types"
 	"strings"
@@ -45,16 +44,13 @@ func (v *visitor) visitTypeSpec(typeSpec *ast.TypeSpec) error {
 
 	methods := specs.MethodSpecs{}
 	for i := 0; i < typ.NumMethods(); i++ {
-		method := typ.Method(i)
+		var (
+			method    = typ.Method(i)
+			name      = method.Name()
+			signature = method.Type().(*types.Signature)
+		)
 
-		if !method.Exported() {
-			return fmt.Errorf(
-				"interface %s contains unexported method %s",
-				typeSpec.Name,
-				typ.Method(i).Name())
-		}
-
-		methods[method.Name()] = deconstructMethod(method.Type().(*types.Signature))
+		methods[name] = deconstructMethod(signature)
 	}
 
 	var (

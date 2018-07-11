@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 	"strings"
+	"unicode"
 
 	"github.com/efritz/go-mockgen/specs"
 )
@@ -33,6 +34,16 @@ func Extract(importPaths []string, interfaces []string) (specs.Specs, error) {
 		for name, spec := range interfaceSpecs {
 			if !shouldInclude(name, interfaces) {
 				continue
+			}
+
+			for method := range spec.Methods {
+				if !unicode.IsUpper([]rune(method)[0]) {
+					return nil, fmt.Errorf(
+						"interface %s contains unexported method %s",
+						name,
+						method,
+					)
+				}
 			}
 
 			if _, ok := allSpecs[name]; ok {
