@@ -9,14 +9,13 @@ import (
 )
 
 const (
+	statsMutexName              = "lock"
 	mockFormat                  = "Mock%s%s"
 	paramSetFormat              = "%s%s%sParamSet"
 	constructorFormat           = "NewMock%s%s"
-	statsMutexFormat            = "stats%sLock"
 	innerMethodFormat           = "%sFunc"
-	statCallCountFormat         = "stat%sFuncCallCount"
 	callCountFormat             = "%sFuncCallCount"
-	statCallParamsFormat        = "stat%sFuncCallParams"
+	statCallParamsFormat        = "hist%s"
 	callParamsFormat            = "%sFuncCallParams"
 	callParamSetFormat          = "%sFuncCallParamSet"
 	defaultMethodFormat         = "default%sFunc"
@@ -76,26 +75,19 @@ func (g *interfaceGenerator) generateInterfaceDefinition() {
 			methodName         = fmt.Sprintf(innerMethodFormat, name)
 			params             = generateParams(method, g.spec.ImportPath, false)
 			results            = generateResults(method, g.spec.ImportPath)
-			statsMutexName     = fmt.Sprintf(statsMutexFormat, name)
-			statCallCountName  = fmt.Sprintf(statCallCountFormat, name)
 			statCallParamsName = fmt.Sprintf(statCallParamsFormat, name)
 			callParamSetName   = fmt.Sprintf(paramSetFormat, g.prefix, g.name, name)
 		)
 
-		// stats{{Method}}Lock sync.RWMutex
-		fields = append(fields, jen.Id(statsMutexName).Qual("sync", "RWMutex"))
-
-		// stat{{Method}}FuncCallCount int
-		fields = append(fields, jen.Id(statCallCountName).Id("int"))
-
-		// stat{{Method}}FuncParams []{{Method}}FuncParamSet
-		fields = append(fields, jen.Id(statCallParamsName).Index().Id(callParamSetName))
-
 		// {{Method}}Func func({{params...}}) {{results...}}
 		fields = append(fields, jen.Id(methodName).Func().Params(params...).Params(results...))
 
-		fields = append(fields, jen.Line())
+		// stat{{Method}}FuncParams []{{Method}}FuncParamSet
+		fields = append(fields, jen.Id(statCallParamsName).Index().Id(callParamSetName))
 	}
+
+	// Lock sync.RWMutex
+	fields = append(fields, jen.Id(statsMutexName).Qual("sync", "RWMutex"))
 
 	// type Mock{{Interface}} struct { [fields] }
 	g.file.Type().Id(name).Struct(fields...)
@@ -169,8 +161,6 @@ func (g *interfaceGenerator) generateMethodImplementations() {
 func (g *interfaceGenerator) generateStatMethodImplementations(name string) {
 	var (
 		structName         = fmt.Sprintf(mockFormat, g.prefix, g.name)
-		statsMutexName     = fmt.Sprintf(statsMutexFormat, name)
-		statCallCountName  = fmt.Sprintf(statCallCountFormat, name)
 		statCallParamsName = fmt.Sprintf(statCallParamsFormat, name)
 		callCountName      = fmt.Sprintf(callCountFormat, name)
 		callParamsName     = fmt.Sprintf(callParamsFormat, name)
@@ -180,7 +170,7 @@ func (g *interfaceGenerator) generateStatMethodImplementations(name string) {
 	g.file.Func().Params(jen.Id("m").Op("*").Id(structName)).Id(callCountName).Params().Params(jen.Int()).Block(
 		jen.Id("m").Dot(statsMutexName).Dot("RLock").Call(),
 		jen.Defer().Id("m").Dot(statsMutexName).Dot("RUnlock").Call(),
-		jen.Return(jen.Id("m").Dot(statCallCountName)),
+		jen.Return(jen.Len(jen.Id("m").Dot(statCallParamsName))),
 	)
 	g.file.Func().Params(jen.Id("m").Op("*").Id(structName)).Id(callParamsName).
 		Params().
@@ -212,8 +202,6 @@ func (g *interfaceGenerator) generateMethodImplementation(name string, method *s
 func (g *interfaceGenerator) generateMethodBody(name string, method *specs.MethodSpec, names []jen.Code) []jen.Code {
 	var (
 		methodName         = fmt.Sprintf(innerMethodFormat, name)
-		statsMutexName     = fmt.Sprintf(statsMutexFormat, name)
-		statCallCountName  = fmt.Sprintf(statCallCountFormat, name)
 		statCallParamsName = fmt.Sprintf(statCallParamsFormat, name)
 		paramNames         = generateParamNames(method, true)
 		callParamSetName   = fmt.Sprintf(paramSetFormat, g.prefix, g.name, name)
@@ -221,9 +209,6 @@ func (g *interfaceGenerator) generateMethodBody(name string, method *specs.Metho
 
 	// m.stats{{Method}}.Lock()
 	lock := jen.Id("m").Dot(statsMutexName).Dot("Lock").Call()
-
-	// m.{{Method}}FuncCallCount++
-	incr := jen.Id("m").Dot(statCallCountName).Op("++")
 
 	// m.{{Method}}FuncCallParams = append(m.{{Method}}FuncCallParams, {params...})
 	params := jen.Id("m").Dot(statCallParamsName).Op("=").Id("append").Call(
@@ -242,7 +227,7 @@ func (g *interfaceGenerator) generateMethodBody(name string, method *specs.Metho
 		dispatch = compose(jen.Return(), dispatch)
 	}
 
-	return []jen.Code{lock, incr, params, unlock, dispatch}
+	return []jen.Code{lock, params, unlock, dispatch}
 }
 
 //
