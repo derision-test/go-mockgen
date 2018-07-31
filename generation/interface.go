@@ -78,8 +78,9 @@ func (g *interfaceGenerator) generateInterfaceDefinition() {
 		fields = []jen.Code{}
 	)
 
-	for name, method := range g.spec.Spec.Methods {
+	for _, name := range g.spec.MethodNames() {
 		var (
+			method             = g.spec.Method(name)
 			methodName         = fmt.Sprintf(innerMethodFormat, name)
 			params             = generateParams(method, g.spec.ImportPath, false)
 			results            = generateResults(method, g.spec.ImportPath)
@@ -105,8 +106,8 @@ func (g *interfaceGenerator) generateInterfaceDefinition() {
 // ParamSet Definitions
 
 func (g *interfaceGenerator) generateParamSetDefinitions() {
-	for methodName, method := range g.spec.Spec.Methods {
-		g.generateParamSetDefinition(methodName, method)
+	for _, name := range g.spec.MethodNames() {
+		g.generateParamSetDefinition(name, g.spec.Method(name))
 	}
 }
 
@@ -138,7 +139,7 @@ func (g *interfaceGenerator) generateConstructor() {
 		fields          = []jen.Code{}
 	)
 
-	for name := range g.spec.Spec.Methods {
+	for _, name := range g.spec.MethodNames() {
 		var (
 			methodName        = fmt.Sprintf(innerMethodFormat, name)
 			defaultMethodName = fmt.Sprintf(defaultMethodFormat, name)
@@ -159,9 +160,9 @@ func (g *interfaceGenerator) generateConstructor() {
 // Method Implementations
 
 func (g *interfaceGenerator) generateMethodImplementations() {
-	for methodName, method := range g.spec.Spec.Methods {
-		g.generateMethodImplementation(methodName, method)
-		g.generateStatMethodImplementations(methodName)
+	for _, name := range g.spec.MethodNames() {
+		g.generateMethodImplementation(name, g.spec.Method(name))
+		g.generateStatMethodImplementations(name)
 		g.file.Line()
 	}
 }
@@ -242,8 +243,11 @@ func (g *interfaceGenerator) generateMethodBody(name string, method *specs.Metho
 // Default Method Implementations
 
 func (g *interfaceGenerator) generateDefaultMethodImplementations() {
-	for name, method := range g.spec.Spec.Methods {
-		g.generateDefaultMethodImplementation(fmt.Sprintf(defaultMethodFormat, name), method)
+	for _, name := range g.spec.MethodNames() {
+		g.generateDefaultMethodImplementation(
+			fmt.Sprintf(defaultMethodFormat, name),
+			g.spec.Method(name),
+		)
 	}
 }
 

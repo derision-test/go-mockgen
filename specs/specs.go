@@ -37,3 +37,17 @@ func (s Specs) Names() []string {
 	sort.Strings(names)
 	return names
 }
+
+func (s WrappedSpec) MethodNames() []string {
+	names := []string{}
+	for name := range s.Spec.Methods {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	return names
+}
+
+func (s WrappedSpec) Method(name string) *MethodSpec {
+	return s.Spec.Methods[name]
+}
