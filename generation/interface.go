@@ -9,18 +9,26 @@ import (
 )
 
 const (
-	statsMutexName              = "lock"
-	mockFormat                  = "Mock%s%s"
-	paramSetFormat              = "%s%s%sParamSet"
-	constructorFormat           = "NewMock%s%s"
+	// Structs
+	mockFormat     = "Mock%s%s"
+	paramSetFormat = "%s%s%sParamSet"
+
+	// Fields
 	innerMethodFormat           = "%sFunc"
-	callCountFormat             = "%sFuncCallCount"
 	statCallParamsFormat        = "hist%s"
-	callParamsFormat            = "%sFuncCallParams"
-	callParamSetFormat          = "%sFuncCallParamSet"
-	defaultMethodFormat         = "default%sFunc"
-	parameterNameFormat         = "v%d"
+	statsMutexName              = "mutex"
 	exportedParameterNameFormat = "Arg%d"
+
+	// Methods
+	callCountFormat  = "%sFuncCallCount"
+	callParamsFormat = "%sFuncCallParams"
+
+	// Variables
+	parameterNameFormat = "v%d"
+
+	// Functions
+	constructorFormat   = "NewMock%s%s"
+	defaultMethodFormat = "default%sFunc"
 )
 
 type interfaceGenerator struct {
