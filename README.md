@@ -13,86 +13,113 @@ Simply run `go get -u github.com/efritz/go-mockgen/...`.
 
 ## Binary Usage
 
-As an example, we generate a mock for the `Retry` interface from the library
-[watchdog](https://github.com/efritz/watchdog). If the watchdog library can
+As an example, we generate a mock for the `Client` interface from the library
+[reception](https://github.com/efritz/reception). If the reception library can
 be found in the GOPATH, the the following command will generate a file called
-`mock_retry.go` with the following content. This assumes that the current
-working directory is called *example*.
+`client_mock.go` with the following content. This assumes that the current
+working directory (also in the GOPATH) is called *example*.
 
 ```bash
-$ go-mockgen github.com/efritz/watchdog -i Retry -d .
+$ go-mockgen github.com/efritz/reception -i Client -d .
 ```
 
 ```go
 // DO NOT EDIT
 // Code generated automatically by github.com/efritz/go-mockgen
+// $ go-mockgen github.com/efritz/reception -i Client -d .
 
 package example
 
-import reception "github.com/efritz/reception"
+import (
+	reception "github.com/efritz/reception"
+	"sync"
+)
 
 type MockClient struct {
-	NewWatcherFunc             func(string) reception.Watcher
-	NewWatcherFuncCallCount    int
-	NewWatcherFuncCallParams   []ClientNewWatcherParamSet
-	RegisterFunc               func(*reception.Service, func(error)) error
-	RegisterFuncCallCount      int
-	RegisterFuncCallParams     []ClientRegisterParamSet
-	ListServicesFunc           func(string) ([]*reception.Service, error)
-	ListServicesFuncCallCount  int
-	ListServicesFuncCallParams []ClientListServicesParamSet
+	ListServicesFunc func(string) ([]*reception.Service, error)
+	histListServices []ClientListServicesParamSet
+	NewWatcherFunc   func(string) reception.Watcher
+	histNewWatcher   []ClientNewWatcherParamSet
+	RegisterFunc     func(*reception.Service, func(error)) error
+	histRegister     []ClientRegisterParamSet
+	mutex            sync.RWMutex
 }
-
+type ClientListServicesParamSet struct {
+	Arg0 string
+}
+type ClientNewWatcherParamSet struct {
+	Arg0 string
+}
 type ClientRegisterParamSet struct {
 	Arg0 *reception.Service
 	Arg1 func(error)
 }
 
-type ClientListServicesParamSet struct {
-	Arg0 string
-}
-
-type ClientNewWatcherParamSet struct {
-	Arg0 string
-}
-
-var _ reception.Client = NewMockClient()
-
 func NewMockClient() *MockClient {
 	m := &MockClient{}
-	m.RegisterFunc = m.defaultRegisterFunc
 	m.ListServicesFunc = m.defaultListServicesFunc
 	m.NewWatcherFunc = m.defaultNewWatcherFunc
+	m.RegisterFunc = m.defaultRegisterFunc
 	return m
 }
-
 func (m *MockClient) ListServices(v0 string) ([]*reception.Service, error) {
-	m.ListServicesFuncCallCount++
-	m.ListServicesFuncCallParams = append(m.ListServicesFuncCallParams, ClientListServicesParamSet{v0})
+	m.mutex.Lock()
+	m.histListServices = append(m.histListServices, ClientListServicesParamSet{v0})
+	m.mutex.Unlock()
 	return m.ListServicesFunc(v0)
+}
+func (m *MockClient) ListServicesFuncCallCount() int {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return len(m.histListServices)
+}
+func (m *MockClient) ListServicesFuncCallParams() []ClientListServicesParamSet {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return m.histListServices
 }
 
 func (m *MockClient) NewWatcher(v0 string) reception.Watcher {
-	m.NewWatcherFuncCallCount++
-	m.NewWatcherFuncCallParams = append(m.NewWatcherFuncCallParams, ClientNewWatcherParamSet{v0})
+	m.mutex.Lock()
+	m.histNewWatcher = append(m.histNewWatcher, ClientNewWatcherParamSet{v0})
+	m.mutex.Unlock()
 	return m.NewWatcherFunc(v0)
+}
+func (m *MockClient) NewWatcherFuncCallCount() int {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return len(m.histNewWatcher)
+}
+func (m *MockClient) NewWatcherFuncCallParams() []ClientNewWatcherParamSet {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return m.histNewWatcher
 }
 
 func (m *MockClient) Register(v0 *reception.Service, v1 func(error)) error {
-	m.RegisterFuncCallCount++
-	m.RegisterFuncCallParams = append(m.RegisterFuncCallParams, ClientRegisterParamSet{v0, v1})
+	m.mutex.Lock()
+	m.histRegister = append(m.histRegister, ClientRegisterParamSet{v0, v1})
+	m.mutex.Unlock()
 	return m.RegisterFunc(v0, v1)
 }
-
-func (m *MockClient) defaultRegisterFunc(v0 *reception.Service, v1 func(error)) error {
-	return nil
+func (m *MockClient) RegisterFuncCallCount() int {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return len(m.histRegister)
+}
+func (m *MockClient) RegisterFuncCallParams() []ClientRegisterParamSet {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return m.histRegister
 }
 
 func (m *MockClient) defaultListServicesFunc(v0 string) ([]*reception.Service, error) {
 	return nil, nil
 }
-
 func (m *MockClient) defaultNewWatcherFunc(v0 string) reception.Watcher {
+	return nil
+}
+func (m *MockClient) defaultRegisterFunc(v0 *reception.Service, v1 func(error)) error {
 	return nil
 }
 ```
