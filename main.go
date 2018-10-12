@@ -19,12 +19,12 @@ func main() {
 }
 
 func run() error {
-	dirname, filename, err := parseArgs()
+	wd, dirname, filename, err := parseArgs()
 	if err != nil {
 		return err
 	}
 
-	allSpecs, err := extraction.Extract(*importPaths, *interfaces)
+	allSpecs, err := extraction.Extract(wd, *importPaths, *interfaces)
 	if err != nil {
 		return err
 	}

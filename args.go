@@ -27,16 +27,16 @@ var (
 
 var identPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*[A-Za-z])?$")
 
-func parseArgs() (string, string, error) {
+func parseArgs() (string, string, string, error) {
 	args := os.Args[1:]
 
 	if _, err := app.Parse(args); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	dirname, filename, err := validateOutputPath(*outputDir, *outputFilename)
+	wd, dirname, filename, err := validateOutputPath(*outputDir, *outputFilename)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	if *pkgName == "" && !*listOnly {
@@ -57,17 +57,17 @@ func parseArgs() (string, string, error) {
 		}
 	}
 
-	return dirname, filename, nil
+	return wd, dirname, filename, nil
 }
 
-func validateOutputPath(dirname, filename string) (string, string, error) {
-	if dirname == "" && filename == "" {
-		dirname, err := os.Getwd()
-		if err != nil {
-			return "", "", fmt.Errorf("Could not get current directory")
-		}
+func validateOutputPath(dirname, filename string) (string, string, string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", "", "", fmt.Errorf("Could not get current directory")
+	}
 
-		return dirname, "", nil
+	if dirname == "" && filename == "" {
+		return wd, wd, "", nil
 	}
 
 	if filename != "" && dirname != "" {
@@ -77,20 +77,20 @@ func validateOutputPath(dirname, filename string) (string, string, error) {
 	if filename != "" {
 		filename, err := filepath.Abs(filename)
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
 
 		dirname, filename = path.Dir(filename), path.Base(filename)
 	}
 
-	dirname, err := filepath.Abs(dirname)
+	dirname, err = filepath.Abs(dirname)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	if err := paths.EnsureDirExists(dirname); err != nil {
-		return "", "", fmt.Errorf("failed to make output directory %s: %s", dirname, err.Error())
+		return "", "", "", fmt.Errorf("failed to make output directory %s: %s", dirname, err.Error())
 	}
 
-	return dirname, filename, nil
+	return wd, dirname, filename, nil
 }

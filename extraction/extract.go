@@ -10,9 +10,9 @@ import (
 	"github.com/efritz/go-mockgen/specs"
 )
 
-func Extract(importPaths []string, interfaces []string) (specs.Specs, error) {
+func Extract(wd string, importPaths []string, interfaces []string) (specs.Specs, error) {
 	var (
-		parser   = newPathParser()
+		parser   = newPathParser(wd)
 		allSpecs = specs.Specs{}
 	)
 
