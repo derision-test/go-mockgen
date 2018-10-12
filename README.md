@@ -20,13 +20,13 @@ be found in the GOPATH, the the following command will generate a file called
 working directory (also in the GOPATH) is called *example*.
 
 ```bash
-$ go-mockgen github.com/efritz/reception -i Client -d .
+$ go-mockgen github.com/efritz/reception -i Client
 ```
 
 ```go
 // DO NOT EDIT
 // Code generated automatically by github.com/efritz/go-mockgen
-// $ go-mockgen github.com/efritz/reception -i Client -d .
+// $ go-mockgen github.com/efritz/reception -i Client
 
 package example
 
@@ -136,8 +136,8 @@ re-generate the mocks.
 ```go
 package foo
 
-//go:generate go-mockgen -d . -f github.com/efritz/watchdog -i Retry
-//go:generate go-mockgen -d . -f github.com/efritz/overcurrent -i Breaker
+//go:generate go-mockgen -f github.com/efritz/watchdog -i Retry
+//go:generate go-mockgen -f github.com/efritz/overcurrent -i Breaker
 ```
 
 ### Flags
