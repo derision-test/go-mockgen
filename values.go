@@ -1,9 +1,10 @@
-package generation
+package main
 
 import (
 	"go/types"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/efritz/go-genlib/generator"
 )
 
 func zeroValue(typ types.Type, importPath string) *jen.Statement {
@@ -21,7 +22,7 @@ func zeroValue(typ types.Type, importPath string) *jen.Statement {
 
 	case *types.Named:
 		if shouldEmitNamedType(t) {
-			return compose(generateQualifiedName(t, importPath), jen.Block())
+			return generator.Compose(generateQualifiedName(t, importPath), jen.Block())
 		}
 
 		return zeroValue(t.Underlying(), importPath)
@@ -31,18 +32,6 @@ func zeroValue(typ types.Type, importPath string) *jen.Statement {
 	}
 
 	return jen.Nil()
-}
-
-func shouldEmitNamedType(t *types.Named) bool {
-	if _, ok := t.Underlying().(*types.Struct); ok {
-		return true
-	}
-
-	if _, ok := t.Underlying().(*types.Array); ok {
-		return true
-	}
-
-	return false
 }
 
 func isIntegerType(kind types.BasicKind) bool {
@@ -70,6 +59,18 @@ func isIntegerType(kind types.BasicKind) bool {
 		if k == kind {
 			return true
 		}
+	}
+
+	return false
+}
+
+func shouldEmitNamedType(t *types.Named) bool {
+	if _, ok := t.Underlying().(*types.Struct); ok {
+		return true
+	}
+
+	if _, ok := t.Underlying().(*types.Array); ok {
+		return true
 	}
 
 	return false

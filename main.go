@@ -5,43 +5,51 @@ import (
 	"os"
 	"strings"
 
-	"github.com/efritz/go-mockgen/extraction"
-	"github.com/efritz/go-mockgen/generation"
+	"github.com/dave/jennifer/jen"
+	"github.com/efritz/go-genlib/command"
+	"github.com/efritz/go-genlib/generator"
+	"github.com/efritz/go-genlib/types"
 )
 
-const Version = "0.1.0"
+const (
+	Name        = "go-mockgen"
+	Description = "go-mockgen generates mock implementations from interface definitions."
+	Version     = "0.1.0"
+)
 
 func main() {
-	if err := run(); err != nil {
+	if err := command.Run(Name, Description, Version, typeGetter, generate); err != nil {
 		fmt.Printf("error: %s\n", err.Error())
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	wd, dirname, filename, err := parseArgs()
-	if err != nil {
-		return err
+func typeGetter(pkgs *types.Packages, name string) (*types.Interface, error) {
+	return pkgs.GetInterface(name)
+}
+
+func generate(ifaces []*types.Interface, opts *command.Options) error {
+	return generator.Generate(
+		"github.com/efritz/go-mockgen",
+		ifaces,
+		opts,
+		filenameGenerator,
+		ifaceGenerator,
+	)
+}
+
+func filenameGenerator(ifaceName string) string {
+	return fmt.Sprintf("%s_mock.go", ifaceName)
+}
+
+func ifaceGenerator(file *jen.File, iface *types.Interface, prefix string) {
+	newInterfaceGenerator(file, title(iface.Name), prefix, iface).generate()
+}
+
+func title(s string) string {
+	if s == "" {
+		return s
 	}
 
-	allSpecs, err := extraction.Extract(wd, *importPaths, *interfaces)
-	if err != nil {
-		return err
-	}
-
-	if *listOnly {
-		for _, name := range allSpecs.Names() {
-			fmt.Printf("%s\n", name)
-		}
-
-		return nil
-	}
-
-	for _, name := range *interfaces {
-		if _, ok := allSpecs[strings.ToLower(name)]; !ok {
-			return fmt.Errorf("interface %s not found in supplied import paths", name)
-		}
-	}
-
-	return generation.Generate(allSpecs, *pkgName, *prefix, dirname, filename, *force)
+	return strings.ToUpper(string(s[0])) + s[1:]
 }

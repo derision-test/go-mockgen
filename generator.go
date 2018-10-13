@@ -1,11 +1,11 @@
-package generation
+package main
 
 import (
 	"fmt"
 
 	"github.com/dave/jennifer/jen"
-
-	"github.com/efritz/go-mockgen/specs"
+	"github.com/efritz/go-genlib/generator"
+	"github.com/efritz/go-genlib/types"
 )
 
 const (
@@ -35,20 +35,20 @@ type interfaceGenerator struct {
 	file   *jen.File
 	name   string
 	prefix string
-	spec   *specs.WrappedSpec
+	iface  *types.Interface
 }
 
 func newInterfaceGenerator(
 	file *jen.File,
 	name string,
 	prefix string,
-	spec *specs.WrappedSpec,
+	iface *types.Interface,
 ) *interfaceGenerator {
 	return &interfaceGenerator{
 		file:   file,
 		name:   name,
 		prefix: prefix,
-		spec:   spec,
+		iface:  iface,
 	}
 }
 
@@ -78,12 +78,12 @@ func (g *interfaceGenerator) generateInterfaceDefinition() {
 		fields = []jen.Code{}
 	)
 
-	for _, name := range g.spec.MethodNames() {
+	for _, name := range g.iface.MethodNames() {
 		var (
-			method             = g.spec.Method(name)
+			method             = g.iface.Method(name)
 			methodName         = fmt.Sprintf(innerMethodFormat, name)
-			params             = generateParams(method, g.spec.ImportPath, false)
-			results            = generateResults(method, g.spec.ImportPath)
+			params             = generateParams(method, g.iface.ImportPath, false)
+			results            = generateResults(method, g.iface.ImportPath)
 			statCallParamsName = fmt.Sprintf(statCallParamsFormat, name)
 			callParamSetName   = fmt.Sprintf(paramSetFormat, g.prefix, g.name, name)
 		)
@@ -106,15 +106,15 @@ func (g *interfaceGenerator) generateInterfaceDefinition() {
 // ParamSet Definitions
 
 func (g *interfaceGenerator) generateParamSetDefinitions() {
-	for _, name := range g.spec.MethodNames() {
-		g.generateParamSetDefinition(name, g.spec.Method(name))
+	for _, name := range g.iface.MethodNames() {
+		g.generateParamSetDefinition(name, g.iface.Method(name))
 	}
 }
 
-func (g *interfaceGenerator) generateParamSetDefinition(name string, method *specs.MethodSpec) {
+func (g *interfaceGenerator) generateParamSetDefinition(name string, method *types.Method) {
 	var (
 		structName = fmt.Sprintf(paramSetFormat, g.prefix, g.name, name)
-		params     = generateParams(method, g.spec.ImportPath, true)
+		params     = generateParams(method, g.iface.ImportPath, true)
 		paramNames = generateExportedParamNames(method)
 		fields     = []jen.Code{}
 	)
@@ -139,7 +139,7 @@ func (g *interfaceGenerator) generateConstructor() {
 		fields          = []jen.Code{}
 	)
 
-	for _, name := range g.spec.MethodNames() {
+	for _, name := range g.iface.MethodNames() {
 		var (
 			methodName        = fmt.Sprintf(innerMethodFormat, name)
 			defaultMethodName = fmt.Sprintf(defaultMethodFormat, name)
@@ -160,8 +160,8 @@ func (g *interfaceGenerator) generateConstructor() {
 // Method Implementations
 
 func (g *interfaceGenerator) generateMethodImplementations() {
-	for _, name := range g.spec.MethodNames() {
-		g.generateMethodImplementation(name, g.spec.Method(name))
+	for _, name := range g.iface.MethodNames() {
+		g.generateMethodImplementation(name, g.iface.Method(name))
 		g.generateStatMethodImplementations(name)
 		g.file.Line()
 	}
@@ -181,6 +181,7 @@ func (g *interfaceGenerator) generateStatMethodImplementations(name string) {
 		jen.Defer().Id("m").Dot(statsMutexName).Dot("RUnlock").Call(),
 		jen.Return(jen.Len(jen.Id("m").Dot(statCallParamsName))),
 	)
+
 	g.file.Func().Params(jen.Id("m").Op("*").Id(structName)).Id(callParamsName).
 		Params().
 		Params(jen.Index().Id(callParamSetName)).
@@ -191,24 +192,24 @@ func (g *interfaceGenerator) generateStatMethodImplementations(name string) {
 		)
 }
 
-func (g *interfaceGenerator) generateMethodImplementation(name string, method *specs.MethodSpec) {
+func (g *interfaceGenerator) generateMethodImplementation(name string, method *types.Method) {
 	var (
 		structName = fmt.Sprintf(mockFormat, g.prefix, g.name)
-		params     = generateParams(method, g.spec.ImportPath, false)
-		results    = generateResults(method, g.spec.ImportPath)
+		params     = generateParams(method, g.iface.ImportPath, false)
+		results    = generateResults(method, g.iface.ImportPath)
 		paramNames = generateParamNames(method, false)
 		body       = g.generateMethodBody(name, method, paramNames)
 	)
 
 	for i, param := range params {
-		params[i] = compose(jen.Id(fmt.Sprintf(parameterNameFormat, i)), param)
+		params[i] = generator.Compose(jen.Id(fmt.Sprintf(parameterNameFormat, i)), param)
 	}
 
 	// func (m *Mock{{Interface}}) {{Method}}({{params...}}) {{results...}} { [body] }
 	g.file.Func().Params(jen.Id("m").Op("*").Id(structName)).Id(name).Params(params...).Params(results...).Block(body...)
 }
 
-func (g *interfaceGenerator) generateMethodBody(name string, method *specs.MethodSpec, names []jen.Code) []jen.Code {
+func (g *interfaceGenerator) generateMethodBody(name string, method *types.Method, names []jen.Code) []jen.Code {
 	var (
 		methodName         = fmt.Sprintf(innerMethodFormat, name)
 		statCallParamsName = fmt.Sprintf(statCallParamsFormat, name)
@@ -233,7 +234,7 @@ func (g *interfaceGenerator) generateMethodBody(name string, method *specs.Metho
 
 	if len(method.Results) != 0 {
 		// return [dispatch]
-		dispatch = compose(jen.Return(), dispatch)
+		dispatch = generator.Compose(jen.Return(), dispatch)
 	}
 
 	return []jen.Code{lock, params, unlock, dispatch}
@@ -243,24 +244,24 @@ func (g *interfaceGenerator) generateMethodBody(name string, method *specs.Metho
 // Default Method Implementations
 
 func (g *interfaceGenerator) generateDefaultMethodImplementations() {
-	for _, name := range g.spec.MethodNames() {
+	for _, name := range g.iface.MethodNames() {
 		g.generateDefaultMethodImplementation(
 			fmt.Sprintf(defaultMethodFormat, name),
-			g.spec.Method(name),
+			g.iface.Method(name),
 		)
 	}
 }
 
-func (g *interfaceGenerator) generateDefaultMethodImplementation(name string, method *specs.MethodSpec) {
-	params := generateParams(method, g.spec.ImportPath, false)
+func (g *interfaceGenerator) generateDefaultMethodImplementation(name string, method *types.Method) {
+	params := generateParams(method, g.iface.ImportPath, false)
 	for i, param := range params {
-		params[i] = compose(jen.Id(fmt.Sprintf(parameterNameFormat, i)), param)
+		params[i] = generator.Compose(jen.Id(fmt.Sprintf(parameterNameFormat, i)), param)
 	}
 
 	var (
 		structName = fmt.Sprintf(mockFormat, g.prefix, g.name)
 		receiver   = jen.Id("m").Op("*").Id(structName)
-		results    = generateResults(method, g.spec.ImportPath)
+		results    = generateResults(method, g.iface.ImportPath)
 		body       = g.generateDefaultMethodBody(method)
 	)
 
@@ -268,12 +269,12 @@ func (g *interfaceGenerator) generateDefaultMethodImplementation(name string, me
 	g.file.Func().Params(receiver).Id(name).Params(params...).Params(results...).Block(body)
 }
 
-func (g *interfaceGenerator) generateDefaultMethodBody(method *specs.MethodSpec) jen.Code {
+func (g *interfaceGenerator) generateDefaultMethodBody(method *types.Method) jen.Code {
 	zeroes := []jen.Code{}
 	for _, typ := range method.Results {
 		zeroes = append(zeroes, zeroValue(
 			typ,
-			g.spec.ImportPath,
+			g.iface.ImportPath,
 		))
 	}
 
@@ -284,7 +285,7 @@ func (g *interfaceGenerator) generateDefaultMethodBody(method *specs.MethodSpec)
 //
 // Common Helpers
 
-func generateParams(method *specs.MethodSpec, importPath string, omitDots bool) []jen.Code {
+func generateParams(method *types.Method, importPath string, omitDots bool) []jen.Code {
 	params := []jen.Code{}
 	for i, typ := range method.Params {
 		params = append(params, generateType(
@@ -297,15 +298,15 @@ func generateParams(method *specs.MethodSpec, importPath string, omitDots bool) 
 	return params
 }
 
-func generateParamNames(method *specs.MethodSpec, omitDots bool) []jen.Code {
+func generateParamNames(method *types.Method, omitDots bool) []jen.Code {
 	return generateParamNamesFormat(method, omitDots, parameterNameFormat)
 }
 
-func generateExportedParamNames(method *specs.MethodSpec) []jen.Code {
+func generateExportedParamNames(method *types.Method) []jen.Code {
 	return generateParamNamesFormat(method, true, exportedParameterNameFormat)
 }
 
-func generateParamNamesFormat(method *specs.MethodSpec, omitDots bool, format string) []jen.Code {
+func generateParamNamesFormat(method *types.Method, omitDots bool, format string) []jen.Code {
 	names := []jen.Code{}
 	for i := range method.Params {
 		name := jen.Id(fmt.Sprintf(format, i))
@@ -320,7 +321,7 @@ func generateParamNamesFormat(method *specs.MethodSpec, omitDots bool, format st
 	return names
 }
 
-func generateResults(method *specs.MethodSpec, importPath string) []jen.Code {
+func generateResults(method *types.Method, importPath string) []jen.Code {
 	results := []jen.Code{}
 	for _, typ := range method.Results {
 		results = append(results, generateType(
