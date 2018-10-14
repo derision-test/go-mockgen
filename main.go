@@ -122,65 +122,62 @@ func generateMethodParts(
 	)
 
 	parts.constructorField = generation.Compose(
-		jen.Id(hookFunctionName).Op(":"), // <Method>Func:
-		zeroFunction,                     // func(t1, ..., tn) { return z1, ..., zn }
+		jen.Id(hookFunctionName).Op(":"),
+		zeroFunction,
 	)
 
 	parts.hookFunctionField = jen.
-		Id(hookFunctionName).  // <Method>Func
-		Func().                // func
-		Params(paramTypes...). // (...)
-		Params(resultTypes...) // (...)
+		Id(hookFunctionName).
+		Func().
+		Params(paramTypes...).
+		Params(resultTypes...)
 
 	parts.callParamsMethodField = jen.
-		Id(callHistoryFieldName). // _<Method>FuncCallHistory
-		Index().                  // []
-		Id(paramSetStructName)    // <Method>ParamSet
+		Id(callHistoryFieldName).
+		Index().
+		Id(paramSetStructName)
 
 	parts.paramSetDef = jen.
-		Type().                         // type
-		Id(paramSetStructName).         // <Prefix><Struct><Method>ParamSet
-		Struct(paramSetStructFields...) // struct { ... }
+		Type().
+		Id(paramSetStructName).
+		Struct(paramSetStructFields...)
 
 	parts.overrideMethodDef = generation.GenerateOverride(
-		"m",                                    // func (m
-		mockStructName,                         // m*Mock<Struct>)
-		iface.ImportPath,                       //
-		method,                                 // <Method>(v0, v1, ...) (...) {
-		lock,                                   // m.mutex.Lock()
-		appendParamSet,                         // m.<CallHistory> = append(m.<CallHistory>, ParamSet{...})
-		unlock,                                 // m.mutex.Unlock()
-		generation.GenerateSuperCall(method),   // r0, ..., rm := m.<Method>(v0, ..., vn)
-		generation.GenerateSuperReturn(method), // return r0, ..., rm }
+		"m",
+		mockStructName,
+		iface.ImportPath,
+		method,
+		lock,
+		appendParamSet,
+		unlock,
+		generation.GenerateSuperCall(method),
+		generation.GenerateSuperReturn(method),
 	)
 
 	parts.callCountMethodDef = generation.GenerateMethod(
-		"m",                                      // func (m
-		mockStructName,                           // *Mock<Struct>)
-		callCountMethodName,                      // <Method>FuncCallCount
-		nil,                                      // ()
-		[]jen.Code{jen.Int()},                    // int
-		lock,                                     // m.mutex.Lock()
-		deferUnlock,                              // defer m.mutex.Unlock()
-		jen.Return(jen.Len(callHistoryFieldRef)), // return len(m._<Method>FuncCallHistory) }
+		"m",
+		mockStructName,
+		callCountMethodName,
+		nil,
+		[]jen.Code{jen.Int()},
+		lock,
+		deferUnlock,
+		jen.Return(jen.Len(callHistoryFieldRef)),
 	)
 
 	parts.callParamMethodDef = generation.GenerateMethod(
-		"m",                                   // func (m
-		mockStructName,                        // *Mock<Struct>)
-		callParamsMethodName,                  // <Method>FuncCallParams
-		nil,                                   // ()
-		[]jen.Code{index(paramSetStructName)}, // []<Struct>ParamSet {
-		lock,                                  // m.mutex.Lock()
-		deferUnlock,                           // defer m.mutex.Unlock()
-		jen.Return(callHistoryFieldRef),       // return m._<Method>FuncCallHistory }
+		"m",
+		mockStructName,
+		callParamsMethodName,
+		nil,
+		[]jen.Code{index(paramSetStructName)},
+		lock,
+		deferUnlock,
+		jen.Return(callHistoryFieldRef),
 	)
 
 	return
 }
-
-//
-// Helpers
 
 func title(s string) string {
 	if s == "" {
