@@ -14,6 +14,7 @@ import (
 
 const (
 	Name        = "go-mockgen"
+	PackageName = "github.com/efritz/go-mockgen"
 	Description = "go-mockgen generates mock implementations from interface definitions."
 	Version     = "0.1.0"
 )
@@ -26,7 +27,7 @@ func main() {
 }
 
 func generate(ifaces []*types.Interface, opts *command.Options) error {
-	return generation.Generate("github.com/efritz/go-mockgen", ifaces, opts, generateFilename, generateInterface)
+	return generation.Generate(PackageName, ifaces, opts, generateFilename, generateInterface)
 }
 
 func generateFilename(name string) string {
@@ -35,167 +36,158 @@ func generateFilename(name string) string {
 
 func generateInterface(file *jen.File, iface *types.Interface, prefix string) {
 	var (
-		titleName         = title(iface.Name)
-		mockStructName    = fmt.Sprintf("Mock%s%s", prefix, titleName)
-		constructorName   = fmt.Sprintf("New%s", mockStructName)
-		structFields      = []jen.Code{}
-		constructorFields = []jen.Code{}
-		methodParts       = map[string]methodParts{}
+		titleName      = title(iface.Name)
+		mockStructName = fmt.Sprintf("Mock%s%s", prefix, titleName)
 	)
 
-	funcs := []func(string) jen.Code{
-		func(name string) jen.Code { return methodParts[name].paramSetDef },
-		func(name string) jen.Code { return methodParts[name].overrideMethodDef },
-		func(name string) jen.Code { return methodParts[name].callCountMethodDef },
-		func(name string) jen.Code { return methodParts[name].callParamMethodDef },
+	file.Add(generateStruct(iface, prefix, titleName, mockStructName))
+	file.Add(generateConstructor(iface, mockStructName))
+
+	methodGenerators := []func(*types.Interface, *types.Method, string, string, string) jen.Code{
+		generateParamSetDef,
+		generateOverrideMethodDef,
+		generateCallCountMethodDef,
+		generateCallParamMethodDef,
 	}
 
 	for _, method := range iface.Methods {
-		parts := generateMethodParts(
-			iface,
-			method,
-			prefix,
-			titleName,
-			mockStructName,
-		)
+		for _, generator := range methodGenerators {
+			file.Add(generator(
+				iface,
+				method,
+				prefix,
+				titleName,
+				mockStructName,
+			))
 
-		constructorFields = append(constructorFields, parts.constructorField)
-		structFields = append(structFields, parts.hookFunctionField, parts.callParamsMethodField)
-		methodParts[method.Name] = parts
-	}
-
-	structDef := jen.Type().Id(mockStructName).Struct(append(
-		structFields,
-		jen.Id("mutex").Qual("sync", "RWMutex"),
-	)...)
-
-	constructorDef := generation.GenerateFunction(
-		constructorName,
-		nil,
-		[]jen.Code{jen.Op("*").Id(mockStructName)},
-		jen.Return().Op("&").Id(mockStructName).Values(constructorFields...),
-	)
-
-	file.Add(structDef)
-	file.Add(constructorDef)
-
-	for _, name := range iface.MethodNames() {
-		for _, f := range funcs {
-			file.Add(f(name))
 			file.Line()
 		}
 	}
 }
 
-type methodParts struct {
-	constructorField      jen.Code
-	hookFunctionField     jen.Code
-	callParamsMethodField jen.Code
-	paramSetDef           jen.Code
-	overrideMethodDef     jen.Code
-	callCountMethodDef    jen.Code
-	callParamMethodDef    jen.Code
+func generateStruct(iface *types.Interface, prefix, titleName, mockStructName string) jen.Code {
+	structFields := []jen.Code{}
+	for _, method := range iface.Methods {
+		hookFuncField := jen.
+			Id(fmt.Sprintf("%sFunc", method.Name)).
+			Func().
+			Params(generation.GenerateParamTypes(method, iface.ImportPath, false)...).
+			Params(generation.GenerateResultTypes(method, iface.ImportPath)...)
+
+		callHistoryField := jen.
+			Id(fmt.Sprintf("_%sFuncCallHistory", method.Name)).
+			Index().
+			Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name))
+
+		structFields = append(structFields, hookFuncField)
+		structFields = append(structFields, callHistoryField)
+	}
+
+	structFields = append(structFields, jen.Id("mutex").Qual("sync", "RWMutex"))
+
+	return jen.
+		Type().
+		Id(mockStructName).
+		Struct(structFields...)
 }
 
-func generateMethodParts(
+func generateConstructor(iface *types.Interface, mockStructName string) jen.Code {
+	constructorFields := []jen.Code{}
+	for _, method := range iface.Methods {
+		constructorFields = append(constructorFields, generation.Compose(
+			jen.Id(fmt.Sprintf("%sFunc", method.Name)).Op(":"),
+			generateZeroFunction(
+				iface.ImportPath,
+				method.Results,
+				generation.GenerateParamTypes(method, iface.ImportPath, false),
+				generation.GenerateResultTypes(method, iface.ImportPath),
+			),
+		))
+	}
+
+	return generation.GenerateFunction(
+		fmt.Sprintf("New%s", mockStructName),
+		nil,
+		[]jen.Code{jen.Op("*").Id(mockStructName)},
+		jen.Return().Op("&").Id(mockStructName).Values(constructorFields...),
+	)
+}
+
+func generateParamSetDef(
 	iface *types.Interface,
 	method *types.Method,
 	prefix string,
 	titleName string,
 	mockStructName string,
-) (parts methodParts) {
-	var (
-		hookFunctionName     = fmt.Sprintf("%sFunc", method.Name)
-		paramSetStructName   = fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name)
-		callCountMethodName  = fmt.Sprintf("%sFuncCallCount", method.Name)
-		callParamsMethodName = fmt.Sprintf("%sFuncCallParams", method.Name)
-		callHistoryFieldName = fmt.Sprintf("_%sFuncCallHistory", method.Name)
-		paramTypes           = generation.GenerateParamTypes(method, iface.ImportPath, false)
-		resultTypes          = generation.GenerateResultTypes(method, iface.ImportPath)
-		paramSetStructFields = makeParamSetFields(generation.GenerateParamTypes(method, iface.ImportPath, true))
-		lock                 = jen.Id("m").Dot("mutex").Dot("RLock").Call()
-		unlock               = jen.Id("m").Dot("mutex").Dot("RUnlock").Call()
-		deferUnlock          = generation.Compose(jen.Defer(), unlock)
-		callHistoryFieldRef  = jen.Id("m").Dot(callHistoryFieldName)
-		zeroFunction         = makeZeroFunction(iface.ImportPath, method.Results, paramTypes, resultTypes)
-		appendParamSet       = selfAppend(callHistoryFieldRef, makeParamSet(paramSetStructName, len(method.Params)))
-	)
-
-	parts.constructorField = generation.Compose(
-		jen.Id(hookFunctionName).Op(":"),
-		zeroFunction,
-	)
-
-	parts.hookFunctionField = jen.
-		Id(hookFunctionName).
-		Func().
-		Params(paramTypes...).
-		Params(resultTypes...)
-
-	parts.callParamsMethodField = jen.
-		Id(callHistoryFieldName).
-		Index().
-		Id(paramSetStructName)
-
-	parts.paramSetDef = jen.
+) jen.Code {
+	return jen.
 		Type().
-		Id(paramSetStructName).
-		Struct(paramSetStructFields...)
+		Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name)).
+		Struct(generateParamSetFields(generation.GenerateParamTypes(method, iface.ImportPath, true))...)
+}
 
-	parts.overrideMethodDef = generation.GenerateOverride(
+func generateOverrideMethodDef(
+	iface *types.Interface,
+	method *types.Method,
+	prefix string,
+	titleName string,
+	mockStructName string,
+) jen.Code {
+	return generation.GenerateOverride(
 		"m",
 		mockStructName,
 		iface.ImportPath,
 		method,
-		lock,
-		appendParamSet,
-		unlock,
-		generation.GenerateSuperCall(method),
-		generation.GenerateSuperReturn(method),
+		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
+		selfAppend(
+			jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name)),
+			generateParamSet(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name), len(method.Params)),
+		),
+		jen.Id("m").Dot("mutex").Dot("RUnlock").Call(),
+		generation.GenerateDecoratedCall(method, jen.Id("m").Dot(fmt.Sprintf("%sFunc", method.Name))),
+		generation.GenerateDecoratedReturn(method),
 	)
+}
 
-	parts.callCountMethodDef = generation.GenerateMethod(
+func generateCallCountMethodDef(
+	iface *types.Interface,
+	method *types.Method,
+	prefix string,
+	titleName string,
+	mockStructName string,
+) jen.Code {
+	return generation.GenerateMethod(
 		"m",
 		mockStructName,
-		callCountMethodName,
+		fmt.Sprintf("%sFuncCallCount", method.Name),
 		nil,
 		[]jen.Code{jen.Int()},
-		lock,
-		deferUnlock,
-		jen.Return(jen.Len(callHistoryFieldRef)),
+		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
+		generation.Compose(jen.Defer(), jen.Id("m").Dot("mutex").Dot("RUnlock").Call()),
+		jen.Return(jen.Len(jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name)))),
 	)
+}
 
-	parts.callParamMethodDef = generation.GenerateMethod(
+func generateCallParamMethodDef(
+	iface *types.Interface,
+	method *types.Method,
+	prefix string,
+	titleName string,
+	mockStructName string,
+) jen.Code {
+	return generation.GenerateMethod(
 		"m",
 		mockStructName,
-		callParamsMethodName,
+		fmt.Sprintf("%sFuncCallParams", method.Name),
 		nil,
-		[]jen.Code{index(paramSetStructName)},
-		lock,
-		deferUnlock,
-		jen.Return(callHistoryFieldRef),
+		[]jen.Code{index(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name))},
+		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
+		generation.Compose(jen.Defer(), jen.Id("m").Dot("mutex").Dot("RUnlock").Call()),
+		jen.Return(jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name))),
 	)
-
-	return
 }
 
-func title(s string) string {
-	if s == "" {
-		return s
-	}
-
-	return strings.ToUpper(string(s[0])) + s[1:]
-}
-
-func index(name string) jen.Code {
-	return jen.Index().Id(name)
-}
-
-func selfAppend(sliceRef *jen.Statement, value jen.Code) jen.Code {
-	return generation.Compose(sliceRef, jen.Op("=").Id("append").Call(sliceRef, value))
-}
-
-func makeZeroFunction(importPath string, results []gotypes.Type, paramTypes, resultTypes []jen.Code) jen.Code {
+func generateZeroFunction(importPath string, results []gotypes.Type, paramTypes, resultTypes []jen.Code) jen.Code {
 	zeroes := []jen.Code{}
 	for _, typ := range results {
 		zeroes = append(zeroes, generation.GenerateZeroValue(
@@ -212,7 +204,7 @@ func makeZeroFunction(importPath string, results []gotypes.Type, paramTypes, res
 	)
 }
 
-func makeParamSetFields(paramTypesNoDots []jen.Code) []jen.Code {
+func generateParamSetFields(paramTypesNoDots []jen.Code) []jen.Code {
 	paramSetStructFields := []jen.Code{}
 	for i, param := range paramTypesNoDots {
 		paramSetStructFields = append(paramSetStructFields, jen.Id(fmt.Sprintf("Arg%d", i)).Add(param))
@@ -221,11 +213,27 @@ func makeParamSetFields(paramTypesNoDots []jen.Code) []jen.Code {
 	return paramSetStructFields
 }
 
-func makeParamSet(paramSetStructName string, paramCount int) jen.Code {
+func generateParamSet(paramSetStructName string, paramCount int) jen.Code {
 	names := []jen.Code{}
 	for i := 0; i < paramCount; i++ {
 		names = append(names, jen.Id(fmt.Sprintf("v%d", i)))
 	}
 
 	return jen.Id(paramSetStructName).Values(names...)
+}
+
+func index(name string) jen.Code {
+	return jen.Index().Id(name)
+}
+
+func selfAppend(sliceRef *jen.Statement, value jen.Code) jen.Code {
+	return generation.Compose(sliceRef, jen.Op("=").Id("append").Call(sliceRef, value))
+}
+
+func title(s string) string {
+	if s == "" {
+		return s
+	}
+
+	return strings.ToUpper(string(s[0])) + s[1:]
 }
