@@ -44,10 +44,10 @@ func generateInterface(file *jen.File, iface *types.Interface, prefix string) {
 	file.Add(generateConstructor(iface, mockStructName))
 
 	methodGenerators := []func(*types.Interface, *types.Method, string, string, string) jen.Code{
-		generateParamSetDef,
-		generateOverrideMethodDef,
-		generateCallCountMethodDef,
-		generateCallParamMethodDef,
+		generateParamSetStruct,
+		generateOverrideMethod,
+		generateCallCountMethod,
+		generateCallParamsMethod,
 	}
 
 	for _, method := range iface.Methods {
@@ -113,7 +113,7 @@ func generateConstructor(iface *types.Interface, mockStructName string) jen.Code
 	)
 }
 
-func generateParamSetDef(
+func generateParamSetStruct(
 	iface *types.Interface,
 	method *types.Method,
 	prefix string,
@@ -123,10 +123,10 @@ func generateParamSetDef(
 	return jen.
 		Type().
 		Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name)).
-		Struct(generateParamSetFields(generation.GenerateParamTypes(method, iface.ImportPath, true))...)
+		Struct(generateParamSetStructFields(generation.GenerateParamTypes(method, iface.ImportPath, true))...)
 }
 
-func generateOverrideMethodDef(
+func generateOverrideMethod(
 	iface *types.Interface,
 	method *types.Method,
 	prefix string,
@@ -141,7 +141,7 @@ func generateOverrideMethodDef(
 		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
 		selfAppend(
 			jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name)),
-			generateParamSet(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name), len(method.Params)),
+			generateParamSetInstance(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name), len(method.Params)),
 		),
 		jen.Id("m").Dot("mutex").Dot("RUnlock").Call(),
 		generation.GenerateDecoratedCall(method, jen.Id("m").Dot(fmt.Sprintf("%sFunc", method.Name))),
@@ -149,7 +149,7 @@ func generateOverrideMethodDef(
 	)
 }
 
-func generateCallCountMethodDef(
+func generateCallCountMethod(
 	iface *types.Interface,
 	method *types.Method,
 	prefix string,
@@ -168,7 +168,7 @@ func generateCallCountMethodDef(
 	)
 }
 
-func generateCallParamMethodDef(
+func generateCallParamsMethod(
 	iface *types.Interface,
 	method *types.Method,
 	prefix string,
@@ -204,7 +204,7 @@ func generateZeroFunction(importPath string, results []gotypes.Type, paramTypes,
 	)
 }
 
-func generateParamSetFields(paramTypesNoDots []jen.Code) []jen.Code {
+func generateParamSetStructFields(paramTypesNoDots []jen.Code) []jen.Code {
 	paramSetStructFields := []jen.Code{}
 	for i, param := range paramTypesNoDots {
 		paramSetStructFields = append(paramSetStructFields, jen.Id(fmt.Sprintf("Arg%d", i)).Add(param))
@@ -213,7 +213,7 @@ func generateParamSetFields(paramTypesNoDots []jen.Code) []jen.Code {
 	return paramSetStructFields
 }
 
-func generateParamSet(paramSetStructName string, paramCount int) jen.Code {
+func generateParamSetInstance(paramSetStructName string, paramCount int) jen.Code {
 	names := []jen.Code{}
 	for i := 0; i < paramCount; i++ {
 		names = append(names, jen.Id(fmt.Sprintf("v%d", i)))
