@@ -75,7 +75,7 @@ func generateStruct(iface *types.Interface, prefix, titleName, mockStructName st
 			Params(generation.GenerateResultTypes(method, iface.ImportPath)...)
 
 		callHistoryField := jen.
-			Id(fmt.Sprintf("_%sFuncCallHistory", method.Name)).
+			Id(fmt.Sprintf("%sFuncCallHistory", method.Name)).
 			Index().
 			Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name))
 
@@ -140,7 +140,7 @@ func generateOverrideMethod(
 		method,
 		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
 		selfAppend(
-			jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name)),
+			jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name)),
 			generateParamSetInstance(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name), len(method.Params)),
 		),
 		jen.Id("m").Dot("mutex").Dot("RUnlock").Call(),
@@ -164,7 +164,7 @@ func generateCallCountMethod(
 		[]jen.Code{jen.Int()},
 		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
 		generation.Compose(jen.Defer(), jen.Id("m").Dot("mutex").Dot("RUnlock").Call()),
-		jen.Return(jen.Len(jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name)))),
+		jen.Return(jen.Len(jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name)))),
 	)
 }
 
@@ -183,7 +183,7 @@ func generateCallParamsMethod(
 		[]jen.Code{index(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name))},
 		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
 		generation.Compose(jen.Defer(), jen.Id("m").Dot("mutex").Dot("RUnlock").Call()),
-		jen.Return(jen.Id("m").Dot(fmt.Sprintf("_%sFuncCallHistory", method.Name))),
+		jen.Return(jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name))),
 	)
 }
 
