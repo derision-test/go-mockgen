@@ -94,14 +94,22 @@ func generateStruct(iface *types.Interface, prefix, titleName, mockStructName st
 func generateConstructor(iface *types.Interface, mockStructName string) jen.Code {
 	constructorFields := []jen.Code{}
 	for _, method := range iface.Methods {
+		fieldTypes := generation.GenerateParamTypes(
+			method,
+			iface.ImportPath,
+			false,
+		)
+
+		zeroFunction := generateZeroFunction(
+			iface.ImportPath,
+			method.Results,
+			fieldTypes,
+			generation.GenerateResultTypes(method, iface.ImportPath),
+		)
+
 		constructorFields = append(constructorFields, generation.Compose(
 			jen.Id(fmt.Sprintf("%sFunc", method.Name)).Op(":"),
-			generateZeroFunction(
-				iface.ImportPath,
-				method.Results,
-				generation.GenerateParamTypes(method, iface.ImportPath, false),
-				generation.GenerateResultTypes(method, iface.ImportPath),
-			),
+			zeroFunction,
 		))
 	}
 
@@ -120,10 +128,16 @@ func generateParamSetStruct(
 	titleName string,
 	mockStructName string,
 ) jen.Code {
+	fieldTypes := generation.GenerateParamTypes(
+		method,
+		iface.ImportPath,
+		true,
+	)
+
 	return jen.
 		Type().
 		Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name)).
-		Struct(generateParamSetStructFields(generation.GenerateParamTypes(method, iface.ImportPath, true))...)
+		Struct(generateParamSetStructFields(fieldTypes)...)
 }
 
 func generateOverrideMethod(
@@ -133,18 +147,30 @@ func generateOverrideMethod(
 	titleName string,
 	mockStructName string,
 ) jen.Code {
+
+	callTarget := jen.
+		Id("m").
+		Dot(fmt.Sprintf("%sFunc", method.Name))
+
+	historyInstance := generateParamSetInstance(
+		fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name),
+		len(method.Params),
+	)
+
+	appendHistory := selfAppend(
+		jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name)),
+		historyInstance,
+	)
+
 	return generation.GenerateOverride(
 		"m",
 		mockStructName,
 		iface.ImportPath,
 		method,
 		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
-		selfAppend(
-			jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name)),
-			generateParamSetInstance(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name), len(method.Params)),
-		),
+		appendHistory,
 		jen.Id("m").Dot("mutex").Dot("RUnlock").Call(),
-		generation.GenerateDecoratedCall(method, jen.Id("m").Dot(fmt.Sprintf("%sFunc", method.Name))),
+		generation.GenerateDecoratedCall(method, callTarget),
 		generation.GenerateDecoratedReturn(method),
 	)
 }
@@ -187,7 +213,12 @@ func generateCallParamsMethod(
 	)
 }
 
-func generateZeroFunction(importPath string, results []gotypes.Type, paramTypes, resultTypes []jen.Code) jen.Code {
+func generateZeroFunction(
+	importPath string,
+	results []gotypes.Type,
+	paramTypes []jen.Code,
+	resultTypes []jen.Code,
+) jen.Code {
 	zeroes := []jen.Code{}
 	for _, typ := range results {
 		zeroes = append(zeroes, generation.GenerateZeroValue(
@@ -205,12 +236,12 @@ func generateZeroFunction(importPath string, results []gotypes.Type, paramTypes,
 }
 
 func generateParamSetStructFields(paramTypesNoDots []jen.Code) []jen.Code {
-	paramSetStructFields := []jen.Code{}
+	fields := []jen.Code{}
 	for i, param := range paramTypesNoDots {
-		paramSetStructFields = append(paramSetStructFields, jen.Id(fmt.Sprintf("Arg%d", i)).Add(param))
+		fields = append(fields, jen.Id(fmt.Sprintf("Arg%d", i)).Add(param))
 	}
 
-	return paramSetStructFields
+	return fields
 }
 
 func generateParamSetInstance(paramSetStructName string, paramCount int) jen.Code {
