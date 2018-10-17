@@ -164,7 +164,6 @@ The following flags are defined by the binary.
 | filename   | o          | The target output file. All mocks are writen to this file. |
 | dirname    | d          | The target output directory. Each mock will be written to a unique file. |
 | force      | f          | Do not abort if a write to disk would overwrite an existing file. |
-| list       |            | Dry run - print the interfaces found in the given import paths. |
 
 If neither dirname nor filename are supplied, then the generated code is printed to standard out.
 
