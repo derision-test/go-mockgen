@@ -138,10 +138,15 @@ func generateParamSetStruct(
 		true,
 	)
 
+	resultTypes := generation.GenerateResultTypes(
+		method,
+		iface.ImportPath,
+	)
+
 	return jen.
 		Type().
 		Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name)).
-		Struct(generateParamSetStructFields(fieldTypes)...)
+		Struct(generateParamSetStructFields(fieldTypes, resultTypes)...)
 }
 
 func generateOverrideMethod(
@@ -158,6 +163,7 @@ func generateOverrideMethod(
 	historyInstance := generateParamSetInstance(
 		fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name),
 		len(method.Params),
+		len(method.Results),
 	)
 
 	appendHistory := selfAppend(
@@ -170,10 +176,10 @@ func generateOverrideMethod(
 		mockStructName,
 		iface.ImportPath,
 		method,
-		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
-		appendHistory,
-		jen.Id("m").Dot("mutex").Dot("RUnlock").Call(),
 		generation.GenerateDecoratedCall(method, callTarget),
+		jen.Id("m").Dot("mutex").Dot("Lock").Call(),
+		appendHistory,
+		jen.Id("m").Dot("mutex").Dot("Unlock").Call(),
 		generation.GenerateDecoratedReturn(method),
 	)
 }
@@ -238,19 +244,27 @@ func generateZeroFunction(
 	)
 }
 
-func generateParamSetStructFields(paramTypesNoDots []jen.Code) []jen.Code {
+func generateParamSetStructFields(paramTypesNoDots, resultTypes []jen.Code) []jen.Code {
 	fields := []jen.Code{}
 	for i, param := range paramTypesNoDots {
 		fields = append(fields, jen.Id(fmt.Sprintf("Arg%d", i)).Add(param))
 	}
 
+	for i, param := range resultTypes {
+		fields = append(fields, jen.Id(fmt.Sprintf("Result%d", i)).Add(param))
+	}
+
 	return fields
 }
 
-func generateParamSetInstance(paramSetStructName string, paramCount int) jen.Code {
+func generateParamSetInstance(paramSetStructName string, paramCount, resultCount int) jen.Code {
 	names := []jen.Code{}
 	for i := 0; i < paramCount; i++ {
 		names = append(names, jen.Id(fmt.Sprintf("v%d", i)))
+	}
+
+	for i := 0; i < resultCount; i++ {
+		names = append(names, jen.Id(fmt.Sprintf("r%d", i)))
 	}
 
 	return jen.Id(paramSetStructName).Values(names...)
