@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	gotypes "go/types"
-	"os"
+	"log"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -19,10 +19,14 @@ const (
 	Version     = "0.1.0"
 )
 
+func init() {
+	log.SetFlags(0)
+	log.SetPrefix("go-mockgen: ")
+}
+
 func main() {
 	if err := command.Run(Name, Description, Version, types.GetInterface, generate); err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		os.Exit(1)
+		log.Fatalf("error: %s\n", err.Error())
 	}
 }
 
@@ -147,7 +151,6 @@ func generateOverrideMethod(
 	titleName string,
 	mockStructName string,
 ) jen.Code {
-
 	callTarget := jen.
 		Id("m").
 		Dot(fmt.Sprintf("%sFunc", method.Name))
