@@ -2,21 +2,75 @@ package main
 
 import (
 	"fmt"
-	gotypes "go/types"
 	"log"
 	"strings"
+	"unicode"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/dustin/go-humanize"
 	"github.com/efritz/go-genlib/command"
 	"github.com/efritz/go-genlib/generation"
 	"github.com/efritz/go-genlib/types"
 )
 
+type (
+	wrappedInterface struct {
+		*types.Interface
+		prefix         string
+		titleName      string
+		mockStructName string
+		wrappedMethods []*wrappedMethod
+	}
+
+	wrappedMethod struct {
+		*types.Method
+		iface             *types.Interface
+		dotlessParamTypes []jen.Code
+		paramTypes        []jen.Code
+		resultTypes       []jen.Code
+		signature         jen.Code
+	}
+
+	topLevelGenerator func(*wrappedInterface) jen.Code
+	methodGenerator   func(*wrappedInterface, *wrappedMethod) jen.Code
+)
+
 const (
-	Name        = "go-mockgen"
-	PackageName = "github.com/efritz/go-mockgen"
-	Description = "go-mockgen generates mock implementations from interface definitions."
-	Version     = "0.1.0"
+	name        = "go-mockgen"
+	packageName = "github.com/efritz/go-mockgen"
+	description = "go-mockgen generates mock implementations from interface definitions."
+	version     = "0.1.0"
+
+	mockStructFormat  = "Mock%s%s"
+	funcStructFormat  = "%s%s%sFunc"
+	callStructFormat  = "%s%s%sFuncCall"
+	funcFieldFormat   = "%sFunc"
+	argFieldFormat    = "Arg%d"
+	resultFieldFormat = "Result%d"
+	argVarFormat      = "v%d"
+	resultVarFormat   = "r%d"
+)
+
+var (
+	topLevelGenerators = []topLevelGenerator{
+		generateMockStruct,
+		generateMockStructConstructor,
+		generateMockStructFromConstructor,
+	}
+
+	methodGenerators = []methodGenerator{
+		generateFuncStruct,
+		generateFunc,
+		generateFuncSetHookMethod,
+		generateFuncPushHookMethod,
+		generateFuncSetReturnMethod,
+		generateFuncPushReturnMethod,
+		generateFuncNextHookMethod,
+		generateFuncHistoryMethod,
+		generateCallStruct,
+		generateCallArgsMethod,
+		generateCallResultsMethod,
+	}
 )
 
 func init() {
@@ -25,13 +79,13 @@ func init() {
 }
 
 func main() {
-	if err := command.Run(Name, Description, Version, types.GetInterface, generate); err != nil {
+	if err := command.Run(name, description, version, types.GetInterface, generate); err != nil {
 		log.Fatalf("error: %s\n", err.Error())
 	}
 }
 
 func generate(ifaces []*types.Interface, opts *command.Options) error {
-	return generation.Generate(PackageName, ifaces, opts, generateFilename, generateInterface)
+	return generation.Generate(packageName, ifaces, opts, generateFilename, generateInterface)
 }
 
 func generateFilename(name string) string {
@@ -40,243 +94,537 @@ func generateFilename(name string) string {
 
 func generateInterface(file *jen.File, iface *types.Interface, prefix string) {
 	var (
-		titleName      = title(iface.Name)
-		mockStructName = fmt.Sprintf("Mock%s%s", prefix, titleName)
+		titleName        = title(iface.Name)
+		mockStructName   = fmt.Sprintf(mockStructFormat, prefix, titleName)
+		wrappedInterface = wrapInterface(iface, prefix, titleName, mockStructName)
 	)
 
-	file.Add(generateStruct(iface, prefix, titleName, mockStructName))
-	file.Add(generateConstructor(iface, mockStructName))
-
-	methodGenerators := []func(*types.Interface, *types.Method, string, string, string) jen.Code{
-		generateParamSetStruct,
-		generateOverrideMethod,
-		generateCallCountMethod,
-		generateCallParamsMethod,
+	for _, generator := range topLevelGenerators {
+		file.Add(generator(wrappedInterface))
+		file.Line()
 	}
 
-	for _, method := range iface.Methods {
+	for _, method := range wrappedInterface.wrappedMethods {
 		for _, generator := range methodGenerators {
-			file.Add(generator(
-				iface,
-				method,
-				prefix,
-				titleName,
-				mockStructName,
-			))
-
+			file.Add(generator(wrappedInterface, method))
 			file.Line()
 		}
 	}
 }
 
-func generateStruct(iface *types.Interface, prefix, titleName, mockStructName string) jen.Code {
-	structFields := []jen.Code{}
-	for _, method := range iface.Methods {
-		hookFuncField := jen.
-			Id(fmt.Sprintf("%sFunc", method.Name)).
-			Func().
-			Params(generation.GenerateParamTypes(method, iface.ImportPath, false)...).
-			Params(generation.GenerateResultTypes(method, iface.ImportPath)...)
-
-		callHistoryField := jen.
-			Id(fmt.Sprintf("%sFuncCallHistory", method.Name)).
-			Index().
-			Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name))
-
-		structFields = append(structFields, hookFuncField)
-		structFields = append(structFields, callHistoryField)
+func wrapInterface(iface *types.Interface, prefix, titleName, mockStructName string) *wrappedInterface {
+	wrapped := &wrappedInterface{
+		Interface:      iface,
+		prefix:         prefix,
+		titleName:      titleName,
+		mockStructName: mockStructName,
 	}
 
-	structFields = append(structFields, jen.Id("mutex").Qual("sync", "RWMutex"))
+	for _, method := range iface.Methods {
+		wrapped.wrappedMethods = append(wrapped.wrappedMethods, wrapMethod(iface, method))
+	}
 
-	return jen.
+	return wrapped
+}
+
+func wrapMethod(iface *types.Interface, method *types.Method) *wrappedMethod {
+	m := &wrappedMethod{
+		Method:            method,
+		iface:             iface,
+		dotlessParamTypes: generation.GenerateParamTypes(method, iface.ImportPath, true),
+		paramTypes:        generation.GenerateParamTypes(method, iface.ImportPath, false),
+		resultTypes:       generation.GenerateResultTypes(method, iface.ImportPath),
+	}
+
+	m.signature = jen.Func().Params(m.paramTypes...).Params(m.resultTypes...)
+	return m
+}
+
+//
+// Mock Struct Generation
+
+func generateMockStruct(iface *wrappedInterface) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"%s is a mock impelementation of the %s interface (from the package %s) used for unit testing.",
+		iface.mockStructName,
+		iface.Name,
+		iface.ImportPath,
+	)
+
+	structFields := []jen.Code{}
+	for _, method := range iface.Methods {
+		name := fmt.Sprintf(funcFieldFormat, method.Name)
+
+		comment := generation.GenerateComment(
+			2,
+			"%s is an instance of a mock function object controlling the behavior of the method %s.",
+			name,
+			method.Name,
+		)
+
+		hookFuncField := comment.
+			Id(name).
+			Op("*").
+			Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name))
+
+		structFields = append(structFields, hookFuncField)
+	}
+
+	return comment.
 		Type().
-		Id(mockStructName).
+		Id(iface.mockStructName).
 		Struct(structFields...)
 }
 
-func generateConstructor(iface *types.Interface, mockStructName string) jen.Code {
+//
+// Constructor Generation
+
+func generateMockStructConstructor(iface *wrappedInterface) jen.Code {
+	name := fmt.Sprintf("New%s", iface.mockStructName)
+
+	comment := generation.GenerateComment(
+		1,
+		"%s creates a new mock of the %s interface. All methods return zero values for all results, unless overwritten.",
+		name,
+		iface.Name,
+	)
+
 	constructorFields := []jen.Code{}
-	for _, method := range iface.Methods {
-		fieldTypes := generation.GenerateParamTypes(
-			method,
-			iface.ImportPath,
-			false,
+	for _, method := range iface.wrappedMethods {
+		zeroes := []jen.Code{}
+		for _, typ := range method.Results {
+			zeroes = append(zeroes, generation.GenerateZeroValue(
+				typ,
+				iface.ImportPath,
+			))
+		}
+
+		zeroFunction := generation.GenerateFunction(
+			"",
+			method.paramTypes,
+			generation.GenerateResultTypes(method.Method, iface.ImportPath),
+			jen.Return().List(zeroes...),
 		)
 
-		zeroFunction := generateZeroFunction(
-			iface.ImportPath,
-			method.Results,
-			fieldTypes,
-			generation.GenerateResultTypes(method, iface.ImportPath),
+		innerStructField := generation.Compose(
+			jen.Line(),
+			generation.Compose(jen.Id("defaultHook").Op(":"), zeroFunction),
 		)
 
-		constructorFields = append(constructorFields, generation.Compose(
-			jen.Id(fmt.Sprintf("%sFunc", method.Name)).Op(":"),
-			zeroFunction,
-		))
+		field := jen.
+			Line().
+			Id(fmt.Sprintf(funcFieldFormat, method.Name)).
+			Op(":").
+			Op("&").
+			Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)).
+			Values(innerStructField, jen.Line())
+
+		constructorFields = append(constructorFields, field)
 	}
 
-	return generation.GenerateFunction(
-		fmt.Sprintf("New%s", mockStructName),
+	constructorFields = append(constructorFields, jen.Line())
+
+	functionDecl := generation.GenerateFunction(
+		name,
 		nil,
-		[]jen.Code{jen.Op("*").Id(mockStructName)},
-		jen.Return().Op("&").Id(mockStructName).Values(constructorFields...),
+		[]jen.Code{jen.Op("*").Id(iface.mockStructName)},
+		jen.Return().Op("&").Id(iface.mockStructName).Values(constructorFields...),
 	)
+
+	return generation.Compose(comment, functionDecl)
 }
 
-func generateParamSetStruct(
-	iface *types.Interface,
-	method *types.Method,
-	prefix string,
-	titleName string,
-	mockStructName string,
-) jen.Code {
-	fieldTypes := generation.GenerateParamTypes(
-		method,
-		iface.ImportPath,
-		true,
+func generateMockStructFromConstructor(iface *wrappedInterface) jen.Code {
+	ifaceName := jen.Qual(iface.ImportPath, iface.Name)
+
+	var surrogate *jen.Statement
+	if !unicode.IsUpper([]rune(iface.Name)[0]) {
+		name := fmt.Sprintf("surrogateMock%s", iface.titleName)
+
+		comment := generation.GenerateComment(
+			1,
+			"%s is a copy of the %s interface (from the package %s). It is redefined here as it is unexported in the source packge.",
+			name,
+			iface.Name,
+			iface.ImportPath,
+		)
+
+		signatures := []jen.Code{}
+		for _, method := range iface.wrappedMethods {
+			signatures = append(signatures, jen.Id(method.Name).Params(method.paramTypes...).Params(method.resultTypes...))
+		}
+
+		ifaceName = jen.Id(name)
+		surrogate = comment.Type().Id(name).Interface(signatures...).Line()
+	}
+
+	name := fmt.Sprintf("New%sFrom", iface.mockStructName)
+
+	comment := generation.GenerateComment(
+		1,
+		"%s creates a new mock of the %s interface. All methods delegate to the given implementation, unless overwritten.",
+		name,
+		iface.mockStructName,
 	)
 
-	resultTypes := generation.GenerateResultTypes(
-		method,
-		iface.ImportPath,
+	constructorFields := []jen.Code{}
+	for _, method := range iface.Methods {
+		innerStructField := generation.Compose(
+			jen.Line(),
+			generation.Compose(jen.Id("defaultHook").Op(":"), jen.Id("i").Dot(method.Name)),
+		)
+
+		field := jen.
+			Line().
+			Id(fmt.Sprintf(funcFieldFormat, method.Name)).
+			Op(":").
+			Op("&").
+			Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)).
+			Values(innerStructField, jen.Line())
+
+		constructorFields = append(constructorFields, field)
+	}
+
+	constructorFields = append(constructorFields, jen.Line())
+
+	functionDecl := generation.GenerateFunction(
+		name,
+		[]jen.Code{generation.Compose(jen.Id("i"), ifaceName)},
+		[]jen.Code{jen.Op("*").Id(iface.mockStructName)},
+		jen.Return().Op("&").Id(iface.mockStructName).Values(constructorFields...),
 	)
 
-	return jen.
+	if surrogate != nil {
+		comment = generation.Compose(surrogate, comment)
+	}
+
+	return generation.Compose(comment, functionDecl)
+}
+
+//
+// Func Struct Generation
+
+func generateFuncStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	name := fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)
+
+	comment := generation.GenerateComment(
+		1,
+		"%s describes the behavior when the %s method of the parent %s instance is invoked.",
+		name,
+		method.Name,
+		iface.mockStructName,
+	)
+
+	defaultHookField := generation.Compose(jen.Id("defaultHook"), method.signature)
+	hooksField := generation.Compose(jen.Id("hooks").Index(), method.signature)
+
+	historyField := jen.
+		Id("history").
+		Index().
+		Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name))
+
+	return comment.
 		Type().
-		Id(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name)).
-		Struct(generateParamSetStructFields(fieldTypes, resultTypes)...)
+		Id(name).
+		Struct(defaultHookField, hooksField, historyField)
 }
 
-func generateOverrideMethod(
-	iface *types.Interface,
-	method *types.Method,
-	prefix string,
-	titleName string,
-	mockStructName string,
-) jen.Code {
+func generateFunc(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"%s delegates to the next hook function in the queue and stores the parameter and result values of this invocation.",
+		method.Name,
+	)
+
 	callTarget := jen.
 		Id("m").
-		Dot(fmt.Sprintf("%sFunc", method.Name))
+		Dot(fmt.Sprintf(funcFieldFormat, method.Name)).
+		Dot("nextHook").
+		Call()
 
-	historyInstance := generateParamSetInstance(
-		fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name),
-		len(method.Params),
-		len(method.Results),
-	)
+	callInstanceStructName := fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)
+
+	names := []jen.Code{}
+	for i := 0; i < len(method.Params); i++ {
+		names = append(names, jen.Id(fmt.Sprintf(argVarFormat, i)))
+	}
+
+	for i := 0; i < len(method.Results); i++ {
+		names = append(names, jen.Id(fmt.Sprintf(resultVarFormat, i)))
+	}
+
+	historyInstance := jen.Id(callInstanceStructName).Values(names...)
 
 	appendHistory := selfAppend(
-		jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name)),
+		jen.Id("m").Dot(fmt.Sprintf(funcFieldFormat, method.Name)).Dot("history"),
 		historyInstance,
 	)
 
-	return generation.GenerateOverride(
-		"m",
-		mockStructName,
-		iface.ImportPath,
-		method,
-		generation.GenerateDecoratedCall(method, callTarget),
-		jen.Id("m").Dot("mutex").Dot("Lock").Call(),
+	methodDecl := generation.GenerateOverride(
+		jen.Id("m").Op("*").Id(iface.mockStructName),
+		method.iface.ImportPath,
+		method.Method,
+		generation.GenerateDecoratedCall(method.Method, callTarget),
 		appendHistory,
-		jen.Id("m").Dot("mutex").Dot("Unlock").Call(),
-		generation.GenerateDecoratedReturn(method),
+		generation.GenerateDecoratedReturn(method.Method),
 	)
+
+	return generation.Compose(comment, methodDecl)
 }
 
-func generateCallCountMethod(
-	iface *types.Interface,
-	method *types.Method,
-	prefix string,
-	titleName string,
-	mockStructName string,
-) jen.Code {
-	return generation.GenerateMethod(
-		"m",
-		mockStructName,
-		fmt.Sprintf("%sFuncCallCount", method.Name),
+func generateFuncSetHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"SetDefaultHook sets function that is called when the %s method of the parent %s instance is invoked and the hook queue is empty.",
+		method.Name,
+		iface.mockStructName,
+	)
+
+	methodDecl := generation.GenerateMethod(
+		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"SetDefaultHook",
+		[]jen.Code{generation.Compose(jen.Id("hook"), method.signature)},
 		nil,
-		[]jen.Code{jen.Int()},
-		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
-		generation.Compose(jen.Defer(), jen.Id("m").Dot("mutex").Dot("RUnlock").Call()),
-		jen.Return(jen.Len(jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name)))),
+		jen.Id("f").Dot("defaultHook").Op("=").Id("hook"),
 	)
+
+	return generation.Compose(comment, methodDecl)
 }
 
-func generateCallParamsMethod(
-	iface *types.Interface,
-	method *types.Method,
-	prefix string,
-	titleName string,
-	mockStructName string,
-) jen.Code {
-	return generation.GenerateMethod(
-		"m",
-		mockStructName,
-		fmt.Sprintf("%sFuncCallParams", method.Name),
+func generateFuncPushHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"PushHook adds a function to the end of hook queue. Each invocation of the %s method of the parent %s instance inovkes the hook at the front of the queue and discards it. After the queue is empty, the default hook function is invoked for any future action.",
+		method.Name,
+		iface.mockStructName,
+	)
+
+	methodDecl := generation.GenerateMethod(
+		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"PushHook",
+		[]jen.Code{generation.Compose(jen.Id("hook"), method.signature)},
 		nil,
-		[]jen.Code{index(fmt.Sprintf("%s%s%sParamSet", prefix, titleName, method.Name))},
-		jen.Id("m").Dot("mutex").Dot("RLock").Call(),
-		generation.Compose(jen.Defer(), jen.Id("m").Dot("mutex").Dot("RUnlock").Call()),
-		jen.Return(jen.Id("m").Dot(fmt.Sprintf("%sFuncCallHistory", method.Name))),
+		selfAppend(jen.Id("f").Dot("hooks"), jen.Id("hook")),
 	)
+
+	return generation.Compose(comment, methodDecl)
 }
 
-func generateZeroFunction(
-	importPath string,
-	results []gotypes.Type,
-	paramTypes []jen.Code,
-	resultTypes []jen.Code,
-) jen.Code {
-	zeroes := []jen.Code{}
-	for _, typ := range results {
-		zeroes = append(zeroes, generation.GenerateZeroValue(
-			typ,
-			importPath,
-		))
-	}
+func generateFuncSetReturnMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	return generateReturnMethod(iface, method, "SetDefault")
+}
 
-	return generation.GenerateFunction(
-		"",
-		paramTypes,
-		resultTypes,
-		jen.Return().List(zeroes...),
+func generateFuncPushReturnMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	return generateReturnMethod(iface, method, "Push")
+}
+
+func generateReturnMethod(iface *wrappedInterface, method *wrappedMethod, methodPrefix string) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"%sReturn calls %sDefaultHook with a function that returns the given values.",
+		methodPrefix,
+		methodPrefix,
 	)
-}
 
-func generateParamSetStructFields(paramTypesNoDots, resultTypes []jen.Code) []jen.Code {
-	fields := []jen.Code{}
-	for i, param := range paramTypesNoDots {
-		fields = append(fields, jen.Id(fmt.Sprintf("Arg%d", i)).Add(param))
-	}
-
-	for i, param := range resultTypes {
-		fields = append(fields, jen.Id(fmt.Sprintf("Result%d", i)).Add(param))
-	}
-
-	return fields
-}
-
-func generateParamSetInstance(paramSetStructName string, paramCount, resultCount int) jen.Code {
 	names := []jen.Code{}
-	for i := 0; i < paramCount; i++ {
-		names = append(names, jen.Id(fmt.Sprintf("v%d", i)))
+	namedResults := []jen.Code{}
+	for i, t := range method.resultTypes {
+		name := jen.Id(fmt.Sprintf(resultVarFormat, i))
+		names = append(names, name)
+		namedResults = append(namedResults, generation.Compose(name, t))
 	}
 
-	for i := 0; i < resultCount; i++ {
-		names = append(names, jen.Id(fmt.Sprintf("r%d", i)))
+	function := generation.GenerateFunction(
+		"",
+		method.paramTypes,
+		method.resultTypes,
+		jen.Return().List(names...),
+	)
+
+	methodDecl := generation.GenerateMethod(
+		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
+		fmt.Sprintf("%sReturn", methodPrefix),
+		namedResults,
+		nil,
+		jen.Id("f").Dot(fmt.Sprintf("%sHook", methodPrefix)).Call(function),
+	)
+
+	return generation.Compose(comment, methodDecl)
+}
+
+func generateFuncNextHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	returnDefaultIfEmpty := jen.
+		If(jen.Len(jen.Id("f").Dot("hooks")).Op("==").Lit(0)).
+		Block(jen.Return(jen.Id("f").Dot("defaultHook")))
+
+	getFirstHook := jen.
+		Id("hook").
+		Op(":=").
+		Id("f").
+		Dot("hooks").
+		Index(jen.Lit(0))
+
+	popHook := jen.
+		Id("f").
+		Dot("hooks").
+		Op("=").
+		Id("f").
+		Dot("hooks").
+		Index(jen.Lit(1).Op(":"))
+
+	return generation.GenerateMethod(
+		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"nextHook",
+		nil,
+		[]jen.Code{method.signature},
+		returnDefaultIfEmpty,
+		jen.Line(),
+		getFirstHook,
+		popHook,
+		jen.Return(jen.Id("hook")),
+	)
+}
+
+func generateFuncHistoryMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"History returns a sequence of %s objects describing the invocations of this function.",
+		fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name),
+	)
+
+	methodDecl := generation.GenerateMethod(
+		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"History",
+		nil,
+		[]jen.Code{jen.Index().Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name))},
+		jen.Return().Id("f").Dot("history"),
+	)
+
+	return generation.Compose(comment, methodDecl)
+}
+
+//
+// Call Struct Generation
+
+func generateCallStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	name := fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)
+
+	comment := generation.GenerateComment(
+		1,
+		"%s is an object that describes an invocation of method %s on an instance of %s.",
+		name,
+		method.Name,
+		iface.mockStructName,
+	)
+
+	fields := []jen.Code{}
+	for i, param := range method.dotlessParamTypes {
+		name := fmt.Sprintf(argFieldFormat, i)
+
+		var commentText string
+		if i == len(method.dotlessParamTypes)-1 && method.Variadic {
+			commentText = fmt.Sprintf(
+				"%s is a slice containing the values of the variadic arguments passed to this method invocation.",
+				name,
+			)
+		} else {
+			commentText = fmt.Sprintf(
+				"%s is the value of the %s argument passed to this method invocation.",
+				name,
+				humanize.Ordinal(i+1),
+			)
+		}
+
+		fields = append(fields, generation.GenerateComment(2, commentText).Id(name).Add(param))
 	}
 
-	return jen.Id(paramSetStructName).Values(names...)
+	for i, param := range method.resultTypes {
+		name := fmt.Sprintf(resultFieldFormat, i)
+
+		comment := generation.GenerateComment(
+			2,
+			"%s is the value of the %s result returned from this method invocation.",
+			name,
+			humanize.Ordinal(i+1),
+		)
+
+		fields = append(fields, comment.Id(name).Add(param))
+	}
+
+	return comment.
+		Type().
+		Id(name).
+		Struct(fields...)
 }
 
-func index(name string) jen.Code {
-	return jen.Index().Id(name)
+func generateCallArgsMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	var commentText string
+	if method.Variadic {
+		commentText = "Args returns an interface slice containing the arguments of this invocation. The variadic slice argument is flattened in this array such that one positional argument and three variadic arguments would result in a slice of four, not two."
+	} else {
+		commentText = "Args returns an interface slice containing the arguments of this invocation."
+	}
+
+	comment := generation.GenerateComment(
+		1,
+		commentText,
+	)
+
+	values := []jen.Code{}
+	for i := range method.Params {
+		values = append(values, jen.Id("c").Dot(fmt.Sprintf(argFieldFormat, i)))
+	}
+
+	var args jen.Code
+
+	if method.Variadic {
+		var (
+			lastIndex         = len(values) - 1
+			lastValue         = values[lastIndex].(*jen.Statement)
+			nonVariadicValues = values[:lastIndex]
+		)
+
+		args = jen.Append(jen.Index().Interface().Values(nonVariadicValues...), lastValue.Op("..."))
+	} else {
+		args = jen.Index().Interface().Values(values...)
+	}
+
+	methodDecl := generation.GenerateMethod(
+		jen.Id("c").Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"Args",
+		nil,
+		[]jen.Code{jen.Index().Interface()},
+		generation.Compose(jen.Return(), args),
+	)
+
+	return generation.Compose(comment, methodDecl)
 }
 
-func selfAppend(sliceRef *jen.Statement, value jen.Code) jen.Code {
-	return generation.Compose(sliceRef, jen.Op("=").Id("append").Call(sliceRef, value))
+func generateCallResultsMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	comment := generation.GenerateComment(
+		1,
+		"Results returns an interface slice containing the results of this invocation.",
+	)
+
+	values := []jen.Code{}
+	for i := range method.Results {
+		values = append(values, jen.Id("c").Dot(fmt.Sprintf(resultFieldFormat, i)))
+	}
+
+	methodDecl := generation.GenerateMethod(
+		jen.Id("c").Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"Results",
+		nil,
+		[]jen.Code{jen.Index().Interface()},
+		jen.Return().Index().Interface().Values(values...),
+	)
+
+	return generation.Compose(comment, methodDecl)
 }
+
+//
+// Helpers
 
 func title(s string) string {
 	if s == "" {
@@ -284,4 +632,8 @@ func title(s string) string {
 	}
 
 	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+func selfAppend(sliceRef *jen.Statement, value jen.Code) jen.Code {
+	return generation.Compose(sliceRef, jen.Op("=").Id("append").Call(sliceRef, value))
 }
