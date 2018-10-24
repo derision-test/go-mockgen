@@ -412,7 +412,12 @@ func (s *GenerationSuite) TestGenerateCallArgsMethodVariadic(t sweet.T) {
 	// that one positional argument and three variadic arguments would result in
 	// a slice of four, not two.
 	func (c TestClientDofFuncCall) Args() []interface{} {
-		return append([]interface{}{c.Arg0}, c.Arg1...)
+		trailing := []interface{}{}
+		for _, val := range c.Arg1 {
+			trailing = append(trailing, val)
+		}
+
+		return append([]interface{}{c.Arg0}, trailing...)
 	}
 	`)))
 }

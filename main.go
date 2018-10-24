@@ -576,18 +576,29 @@ func generateCallArgsMethod(iface *wrappedInterface, method *wrappedMethod) jen.
 		values = append(values, jen.Id("c").Dot(fmt.Sprintf(argFieldFormat, i)))
 	}
 
-	var args jen.Code
+	var body jen.Code
 
 	if method.Variadic {
 		var (
 			lastIndex         = len(values) - 1
-			lastValue         = values[lastIndex].(*jen.Statement)
 			nonVariadicValues = values[:lastIndex]
 		)
 
-		args = jen.Append(jen.Index().Interface().Values(nonVariadicValues...), lastValue.Op("..."))
+		body = jen.
+			Id("trailing").
+			Op(":=").
+			Index().
+			Interface().
+			Values().
+			Line().
+			For(generation.Compose(jen.Id("_").Op(",").Id("val").Op(":=").Range(), values[lastIndex])).
+			Block(selfAppend(jen.Id("trailing"), jen.Id("val"))).
+			Line().
+			Line().
+			Return().
+			Append(jen.Index().Interface().Values(nonVariadicValues...), jen.Id("trailing").Op("..."))
 	} else {
-		args = jen.Index().Interface().Values(values...)
+		body = jen.Return().Index().Interface().Values(values...)
 	}
 
 	methodDecl := generation.GenerateMethod(
@@ -595,7 +606,7 @@ func generateCallArgsMethod(iface *wrappedInterface, method *wrappedMethod) jen.
 		"Args",
 		nil,
 		[]jen.Code{jen.Index().Interface()},
-		generation.Compose(jen.Return(), args),
+		body,
 	)
 
 	return generation.Compose(comment, methodDecl)
