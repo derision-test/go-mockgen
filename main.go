@@ -85,7 +85,7 @@ func main() {
 }
 
 func generate(ifaces []*types.Interface, opts *command.Options) error {
-	return generation.Generate(packageName, ifaces, opts, generateFilename, generateInterface)
+	return generation.Generate(packageName, version, ifaces, opts, generateFilename, generateInterface)
 }
 
 func generateFilename(name string) string {

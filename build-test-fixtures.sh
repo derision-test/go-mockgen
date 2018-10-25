@@ -1,9 +1,13 @@
 #!/bin/bash
 
-if [ ! -f ./go-mockgen ]; then
+binname="go-mockgen"
+srcpath="github.com/efritz/go-mockgen/internal/e2e-tests"
+genpath="./internal/e2e-tests/mocks"
+
+if [ ! -f "./${binname}" ]; then
     function finish {
         echo "Removing binary..."
-        rm ./go-mockgen
+        rm "./${binname}"
     }
 
     echo "Binary not found, building..."
@@ -12,7 +16,7 @@ if [ ! -f ./go-mockgen ]; then
 fi
 
 echo "Clearing old mocks..."
-rm -f ./internal/e2e-tests/mock/*.go
+rm -f "${genpath}/*.go"
 
 echo "Generating mocks..."
-./go-mockgen github.com/efritz/go-mockgen/internal/e2e-tests/iface -d ./internal/e2e-tests/mock -f
+"./${binname}" -d "${genpath}" -f "${srcpath}"

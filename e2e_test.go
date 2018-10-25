@@ -7,14 +7,14 @@ import (
 	. "github.com/efritz/go-mockgen/matchers"
 	. "github.com/onsi/gomega"
 
-	"github.com/efritz/go-mockgen/internal/e2e-tests/iface"
-	"github.com/efritz/go-mockgen/internal/e2e-tests/mock"
+	e2etests "github.com/efritz/go-mockgen/internal/e2e-tests"
+	"github.com/efritz/go-mockgen/internal/e2e-tests/mocks"
 )
 
 type E2ESuite struct{}
 
 func (s *E2ESuite) TestCalls(t sweet.T) {
-	mock := mock.NewMockClient()
+	mock := mocks.NewMockClient()
 	Expect(mock.CloseFunc).NotTo(BeCalled())
 	Expect(mock.Close()).To(BeNil())
 	Expect(mock.CloseFunc).To(BeCalled())
@@ -23,14 +23,14 @@ func (s *E2ESuite) TestCalls(t sweet.T) {
 }
 
 func (s *E2ESuite) TestCallsWithArgs(t sweet.T) {
-	mock := mock.NewMockClient()
+	mock := mocks.NewMockClient()
 	mock.Do("foo")
 	Expect(mock.DoFunc).To(BeCalled())
 	Expect(mock.DoFunc).To(BeCalledWith("foo"))
 }
 
 func (s *E2ESuite) TestCallsWithVariadicArgs(t sweet.T) {
-	mock := mock.NewMockClient()
+	mock := mocks.NewMockClient()
 	mock.DoArgs("foo", 1, 2, 3)
 	Expect(mock.DoArgsFunc).To(BeCalledWith("foo", 1, 2, 3))
 	Expect(mock.DoArgsFunc).To(BeCalledWith(Equal("foo"), Equal(1), Equal(2), Equal(3)))
@@ -46,16 +46,16 @@ func (s *E2ESuite) TestCallsWithVariadicArgs(t sweet.T) {
 }
 
 func (s *E2ESuite) TestPushHook(t sweet.T) {
-	child1 := mock.NewMockChild()
-	child2 := mock.NewMockChild()
-	child3 := mock.NewMockChild()
-	parent := mock.NewMockParent()
+	child1 := mocks.NewMockChild()
+	child2 := mocks.NewMockChild()
+	child3 := mocks.NewMockChild()
+	parent := mocks.NewMockParent()
 
-	parent.GetChildFunc.PushHook(func(i int) (iface.Child, error) { return child1, nil })
-	parent.GetChildFunc.PushHook(func(i int) (iface.Child, error) { return child2, nil })
-	parent.GetChildFunc.PushHook(func(i int) (iface.Child, error) { return child3, nil })
+	parent.GetChildFunc.PushHook(func(i int) (e2etests.Child, error) { return child1, nil })
+	parent.GetChildFunc.PushHook(func(i int) (e2etests.Child, error) { return child2, nil })
+	parent.GetChildFunc.PushHook(func(i int) (e2etests.Child, error) { return child3, nil })
 
-	parent.GetChildFunc.SetDefaultHook(func(i int) (iface.Child, error) {
+	parent.GetChildFunc.SetDefaultHook(func(i int) (e2etests.Child, error) {
 		return nil, fmt.Errorf("utoh")
 	})
 
@@ -68,17 +68,17 @@ func (s *E2ESuite) TestPushHook(t sweet.T) {
 }
 
 func (s *E2ESuite) TestSetDefaultReturn(t sweet.T) {
-	parent := mock.NewMockParent()
+	parent := mocks.NewMockParent()
 	parent.GetChildFunc.SetDefaultReturn(nil, fmt.Errorf("utoh"))
 	_, err := parent.GetChild(0)
 	Expect(err).To(MatchError("utoh"))
 }
 
 func (s *E2ESuite) TestPushReturn(t sweet.T) {
-	parent := mock.NewMockParent()
-	parent.GetChildrenFunc.PushReturn([]iface.Child{nil})
-	parent.GetChildrenFunc.PushReturn([]iface.Child{nil, nil})
-	parent.GetChildrenFunc.PushReturn([]iface.Child{nil, nil, nil})
+	parent := mocks.NewMockParent()
+	parent.GetChildrenFunc.PushReturn([]e2etests.Child{nil})
+	parent.GetChildrenFunc.PushReturn([]e2etests.Child{nil, nil})
+	parent.GetChildrenFunc.PushReturn([]e2etests.Child{nil, nil, nil})
 
 	Expect(parent.GetChildren()).To(HaveLen(1))
 	Expect(parent.GetChildren()).To(HaveLen(2))

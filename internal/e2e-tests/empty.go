@@ -1,3 +1,3 @@
-package iface
+package e2etests
 
 type Empty interface{}

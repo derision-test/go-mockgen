@@ -1,4 +1,4 @@
-package iface
+package e2etests
 
 type Parent interface {
 	AddChild(c Child)

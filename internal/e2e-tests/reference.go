@@ -1,4 +1,4 @@
-package iface
+package e2etests
 
 import "context"
 
