@@ -9,7 +9,9 @@ go:
   - 1.11.x
   - tip
 install: go mod vendor
-script: go test -mod vendor -coverprofile=c.out -covermode=atomic
+script:
+  - ./build-test-fixtures.sh
+  - go test -mod vendor -coverprofile=c.out -covermode=atomic
 
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
