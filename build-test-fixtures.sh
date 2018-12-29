@@ -1,7 +1,7 @@
 #!/bin/bash
 
 binname="go-mockgen"
-srcpath="github.com/efritz/go-mockgen/internal/e2e-tests"
+srcpath="./internal/e2e-tests"
 genpath="./internal/e2e-tests/mocks"
 
 if [ ! -f "./${binname}" ]; then
