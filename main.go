@@ -14,6 +14,10 @@ import (
 )
 
 type (
+	generator struct {
+		outputImportPath string
+	}
+
 	wrappedInterface struct {
 		*types.Interface
 		prefix         string
@@ -51,28 +55,6 @@ const (
 	resultVarFormat   = "r%d"
 )
 
-var (
-	topLevelGenerators = []topLevelGenerator{
-		generateMockStruct,
-		generateMockStructConstructor,
-		generateMockStructFromConstructor,
-	}
-
-	methodGenerators = []methodGenerator{
-		generateFuncStruct,
-		generateFunc,
-		generateFuncSetHookMethod,
-		generateFuncPushHookMethod,
-		generateFuncSetReturnMethod,
-		generateFuncPushReturnMethod,
-		generateFuncNextHookMethod,
-		generateFuncHistoryMethod,
-		generateCallStruct,
-		generateCallArgsMethod,
-		generateCallResultsMethod,
-	}
-)
-
 func init() {
 	log.SetFlags(0)
 	log.SetPrefix("go-mockgen: ")
@@ -85,19 +67,50 @@ func main() {
 }
 
 func generate(ifaces []*types.Interface, opts *command.Options) error {
-	return generation.Generate(packageName, version, ifaces, opts, generateFilename, generateInterface)
+	g := &generator{
+		outputImportPath: opts.OutputImportPath,
+	}
+
+	return generation.Generate(
+		packageName,
+		version,
+		ifaces,
+		opts,
+		generateFilename,
+		g.generateInterface,
+	)
 }
 
 func generateFilename(name string) string {
 	return fmt.Sprintf("%s_mock.go", name)
 }
 
-func generateInterface(file *jen.File, iface *types.Interface, prefix string) {
+func (g *generator) generateInterface(file *jen.File, iface *types.Interface, prefix string) {
 	var (
 		titleName        = title(iface.Name)
 		mockStructName   = fmt.Sprintf(mockStructFormat, prefix, titleName)
-		wrappedInterface = wrapInterface(iface, prefix, titleName, mockStructName)
+		wrappedInterface = g.wrapInterface(iface, prefix, titleName, mockStructName)
 	)
+
+	topLevelGenerators := []topLevelGenerator{
+		g.generateMockStruct,
+		g.generateMockStructConstructor,
+		g.generateMockStructFromConstructor,
+	}
+
+	methodGenerators := []methodGenerator{
+		g.generateFuncStruct,
+		g.generateFunc,
+		g.generateFuncSetHookMethod,
+		g.generateFuncPushHookMethod,
+		g.generateFuncSetReturnMethod,
+		g.generateFuncPushReturnMethod,
+		g.generateFuncNextHookMethod,
+		g.generateFuncHistoryMethod,
+		g.generateCallStruct,
+		g.generateCallArgsMethod,
+		g.generateCallResultsMethod,
+	}
 
 	for _, generator := range topLevelGenerators {
 		file.Add(generator(wrappedInterface))
@@ -112,7 +125,7 @@ func generateInterface(file *jen.File, iface *types.Interface, prefix string) {
 	}
 }
 
-func wrapInterface(iface *types.Interface, prefix, titleName, mockStructName string) *wrappedInterface {
+func (g *generator) wrapInterface(iface *types.Interface, prefix, titleName, mockStructName string) *wrappedInterface {
 	wrapped := &wrappedInterface{
 		Interface:      iface,
 		prefix:         prefix,
@@ -121,19 +134,19 @@ func wrapInterface(iface *types.Interface, prefix, titleName, mockStructName str
 	}
 
 	for _, method := range iface.Methods {
-		wrapped.wrappedMethods = append(wrapped.wrappedMethods, wrapMethod(iface, method))
+		wrapped.wrappedMethods = append(wrapped.wrappedMethods, g.wrapMethod(iface, method))
 	}
 
 	return wrapped
 }
 
-func wrapMethod(iface *types.Interface, method *types.Method) *wrappedMethod {
+func (g *generator) wrapMethod(iface *types.Interface, method *types.Method) *wrappedMethod {
 	m := &wrappedMethod{
 		Method:            method,
 		iface:             iface,
-		dotlessParamTypes: generation.GenerateParamTypes(method, iface.ImportPath, true),
-		paramTypes:        generation.GenerateParamTypes(method, iface.ImportPath, false),
-		resultTypes:       generation.GenerateResultTypes(method, iface.ImportPath),
+		dotlessParamTypes: generation.GenerateParamTypes(method, iface.ImportPath, g.outputImportPath, true),
+		paramTypes:        generation.GenerateParamTypes(method, iface.ImportPath, g.outputImportPath, false),
+		resultTypes:       generation.GenerateResultTypes(method, iface.ImportPath, g.outputImportPath),
 	}
 
 	m.signature = jen.Func().Params(m.paramTypes...).Params(m.resultTypes...)
@@ -143,7 +156,7 @@ func wrapMethod(iface *types.Interface, method *types.Method) *wrappedMethod {
 //
 // Mock Struct Generation
 
-func generateMockStruct(iface *wrappedInterface) jen.Code {
+func (g *generator) generateMockStruct(iface *wrappedInterface) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"%s is a mock impelementation of the %s interface (from the package %s) used for unit testing.",
@@ -180,7 +193,7 @@ func generateMockStruct(iface *wrappedInterface) jen.Code {
 //
 // Constructor Generation
 
-func generateMockStructConstructor(iface *wrappedInterface) jen.Code {
+func (g *generator) generateMockStructConstructor(iface *wrappedInterface) jen.Code {
 	name := fmt.Sprintf("New%s", iface.mockStructName)
 
 	comment := generation.GenerateComment(
@@ -197,13 +210,14 @@ func generateMockStructConstructor(iface *wrappedInterface) jen.Code {
 			zeroes = append(zeroes, generation.GenerateZeroValue(
 				typ,
 				iface.ImportPath,
+				g.outputImportPath,
 			))
 		}
 
 		zeroFunction := generation.GenerateFunction(
 			"",
 			method.paramTypes,
-			generation.GenerateResultTypes(method.Method, iface.ImportPath),
+			generation.GenerateResultTypes(method.Method, iface.ImportPath, g.outputImportPath),
 			jen.Return().List(zeroes...),
 		)
 
@@ -235,8 +249,8 @@ func generateMockStructConstructor(iface *wrappedInterface) jen.Code {
 	return generation.Compose(comment, functionDecl)
 }
 
-func generateMockStructFromConstructor(iface *wrappedInterface) jen.Code {
-	ifaceName := jen.Qual(iface.ImportPath, iface.Name)
+func (g *generator) generateMockStructFromConstructor(iface *wrappedInterface) jen.Code {
+	ifaceName := jen.Qual(generation.SanitizeImportPath(iface.ImportPath, g.outputImportPath), iface.Name)
 
 	var surrogate *jen.Statement
 	if !unicode.IsUpper([]rune(iface.Name)[0]) {
@@ -305,7 +319,7 @@ func generateMockStructFromConstructor(iface *wrappedInterface) jen.Code {
 //
 // Func Struct Generation
 
-func generateFuncStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateFuncStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	name := fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)
 
 	comment := generation.GenerateComment(
@@ -330,7 +344,7 @@ func generateFuncStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code
 		Struct(defaultHookField, hooksField, historyField)
 }
 
-func generateFunc(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateFunc(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"%s delegates to the next hook function in the queue and stores the parameter and result values of this invocation.",
@@ -364,6 +378,7 @@ func generateFunc(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	methodDecl := generation.GenerateOverride(
 		jen.Id("m").Op("*").Id(iface.mockStructName),
 		method.iface.ImportPath,
+		g.outputImportPath,
 		method.Method,
 		generation.GenerateDecoratedCall(method.Method, callTarget),
 		appendHistory,
@@ -373,7 +388,7 @@ func generateFunc(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	return generation.Compose(comment, methodDecl)
 }
 
-func generateFuncSetHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateFuncSetHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"SetDefaultHook sets function that is called when the %s method of the parent %s instance is invoked and the hook queue is empty.",
@@ -392,7 +407,7 @@ func generateFuncSetHookMethod(iface *wrappedInterface, method *wrappedMethod) j
 	return generation.Compose(comment, methodDecl)
 }
 
-func generateFuncPushHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateFuncPushHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"PushHook adds a function to the end of hook queue. Each invocation of the %s method of the parent %s instance inovkes the hook at the front of the queue and discards it. After the queue is empty, the default hook function is invoked for any future action.",
@@ -411,15 +426,15 @@ func generateFuncPushHookMethod(iface *wrappedInterface, method *wrappedMethod) 
 	return generation.Compose(comment, methodDecl)
 }
 
-func generateFuncSetReturnMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
-	return generateReturnMethod(iface, method, "SetDefault")
+func (g *generator) generateFuncSetReturnMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	return g.generateReturnMethod(iface, method, "SetDefault")
 }
 
-func generateFuncPushReturnMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
-	return generateReturnMethod(iface, method, "Push")
+func (g *generator) generateFuncPushReturnMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	return g.generateReturnMethod(iface, method, "Push")
 }
 
-func generateReturnMethod(iface *wrappedInterface, method *wrappedMethod, methodPrefix string) jen.Code {
+func (g *generator) generateReturnMethod(iface *wrappedInterface, method *wrappedMethod, methodPrefix string) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"%sReturn calls %sDefaultHook with a function that returns the given values.",
@@ -453,7 +468,7 @@ func generateReturnMethod(iface *wrappedInterface, method *wrappedMethod, method
 	return generation.Compose(comment, methodDecl)
 }
 
-func generateFuncNextHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateFuncNextHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	returnDefaultIfEmpty := jen.
 		If(jen.Len(jen.Id("f").Dot("hooks")).Op("==").Lit(0)).
 		Block(jen.Return(jen.Id("f").Dot("defaultHook")))
@@ -486,7 +501,7 @@ func generateFuncNextHookMethod(iface *wrappedInterface, method *wrappedMethod) 
 	)
 }
 
-func generateFuncHistoryMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateFuncHistoryMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"History returns a sequence of %s objects describing the invocations of this function.",
@@ -507,7 +522,7 @@ func generateFuncHistoryMethod(iface *wrappedInterface, method *wrappedMethod) j
 //
 // Call Struct Generation
 
-func generateCallStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateCallStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	name := fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)
 
 	comment := generation.GenerateComment(
@@ -558,7 +573,7 @@ func generateCallStruct(iface *wrappedInterface, method *wrappedMethod) jen.Code
 		Struct(fields...)
 }
 
-func generateCallArgsMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateCallArgsMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	var commentText string
 	if method.Variadic {
 		commentText = "Args returns an interface slice containing the arguments of this invocation. The variadic slice argument is flattened in this array such that one positional argument and three variadic arguments would result in a slice of four, not two."
@@ -612,7 +627,7 @@ func generateCallArgsMethod(iface *wrappedInterface, method *wrappedMethod) jen.
 	return generation.Compose(comment, methodDecl)
 }
 
-func generateCallResultsMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+func (g *generator) generateCallResultsMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	comment := generation.GenerateComment(
 		1,
 		"Results returns an interface slice containing the results of this invocation.",

@@ -78,7 +78,8 @@ func (s *GenerationSuite) TestGenerateInterface(t sweet.T) {
 	}
 
 	file := jen.NewFile("test")
-	generateInterface(file, makeBareInterface(TestMethodDo, TestMethodDof), TestPrefix)
+	g := &generator{""}
+	g.generateInterface(file, makeBareInterface(TestMethodDo, TestMethodDof), TestPrefix)
 	rendered := fmt.Sprintf("%#v\n", file)
 
 	for _, decl := range expectedDecls {
@@ -87,7 +88,8 @@ func (s *GenerationSuite) TestGenerateInterface(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateMockStruct(t sweet.T) {
-	code := generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	g := &generator{""}
+	code := g.generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// MockTestClient is a mock impelementation of the Client interface (from
@@ -107,7 +109,8 @@ func (s *GenerationSuite) TestGenerateMockStruct(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateMockStructConstructor(t sweet.T) {
-	code := generateMockStructConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	g := &generator{""}
+	code := g.generateMockStructConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// NewMockTestClient creates a new mock of the Client interface. All methods
@@ -135,7 +138,8 @@ func (s *GenerationSuite) TestGenerateMockStructConstructor(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateMockStructFromConstructor(t sweet.T) {
-	code := generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	g := &generator{""}
+	code := g.generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// NewMockTestClientFrom creates a new mock of the MockTestClient interface.
@@ -160,7 +164,8 @@ func (s *GenerationSuite) TestGenerateMockStructFromConstructorUnexported(t swee
 	iface := makeBareInterface(TestMethodStatus, TestMethodDo, TestMethodDof)
 	iface.Name = "client"
 
-	code := generateMockStructFromConstructor(wrapInterface(iface, TestPrefix, TestTitleName, TestMockStructName))
+	g := &generator{""}
+	code := g.generateMockStructFromConstructor(g.wrapInterface(iface, TestPrefix, TestTitleName, TestMockStructName))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// surrogateMockClient is a copy of the client interface (from the package
@@ -191,7 +196,8 @@ func (s *GenerationSuite) TestGenerateMockStructFromConstructorUnexported(t swee
 }
 
 func (s *GenerationSuite) TestGenerateFuncStruct(t sweet.T) {
-	code := generateFuncStruct(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncStruct(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// TestClientDoFunc describes the behavior when the Do method of the parent
@@ -205,7 +211,8 @@ func (s *GenerationSuite) TestGenerateFuncStruct(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncStructVariadic(t sweet.T) {
-	code := generateFuncStruct(makeMethod(TestMethodDof))
+	g := &generator{""}
+	code := g.generateFuncStruct(makeMethod(TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// TestClientDofFunc describes the behavior when the Dof method of the
@@ -219,7 +226,8 @@ func (s *GenerationSuite) TestGenerateFuncStructVariadic(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFunc(t sweet.T) {
-	code := generateFunc(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFunc(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// Do delegates to the next hook function in the queue and stores the
@@ -233,7 +241,8 @@ func (s *GenerationSuite) TestGenerateFunc(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncVariadic(t sweet.T) {
-	code := generateFunc(makeMethod(TestMethodDof))
+	g := &generator{""}
+	code := g.generateFunc(makeMethod(TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// Dof delegates to the next hook function in the queue and stores the
@@ -247,7 +256,8 @@ func (s *GenerationSuite) TestGenerateFuncVariadic(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncSetHookMethod(t sweet.T) {
-	code := generateFuncSetHookMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncSetHookMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// SetDefaultHook sets function that is called when the Do method of the
@@ -259,7 +269,8 @@ func (s *GenerationSuite) TestGenerateFuncSetHookMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncSetHookMethodVariadic(t sweet.T) {
-	code := generateFuncSetHookMethod(makeMethod(TestMethodDof))
+	g := &generator{""}
+	code := g.generateFuncSetHookMethod(makeMethod(TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// SetDefaultHook sets function that is called when the Dof method of the
@@ -271,7 +282,8 @@ func (s *GenerationSuite) TestGenerateFuncSetHookMethodVariadic(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncPushHookMethod(t sweet.T) {
-	code := generateFuncPushHookMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncPushHookMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// PushHook adds a function to the end of hook queue. Each invocation of the
@@ -285,7 +297,8 @@ func (s *GenerationSuite) TestGenerateFuncPushHookMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncPushHookMethodVariadic(t sweet.T) {
-	code := generateFuncPushHookMethod(makeMethod(TestMethodDof))
+	g := &generator{""}
+	code := g.generateFuncPushHookMethod(makeMethod(TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// PushHook adds a function to the end of hook queue. Each invocation of the
@@ -299,7 +312,8 @@ func (s *GenerationSuite) TestGenerateFuncPushHookMethodVariadic(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncSetReturnMethod(t sweet.T) {
-	code := generateFuncSetReturnMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncSetReturnMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// SetDefaultReturn calls SetDefaultDefaultHook with a function that returns
@@ -313,7 +327,8 @@ func (s *GenerationSuite) TestGenerateFuncSetReturnMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncPushReturnMethod(t sweet.T) {
-	code := generateFuncPushReturnMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncPushReturnMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// PushReturn calls PushDefaultHook with a function that returns the given
@@ -327,7 +342,8 @@ func (s *GenerationSuite) TestGenerateFuncPushReturnMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncNextHookMethod(t sweet.T) {
-	code := generateFuncNextHookMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncNextHookMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	func (f *TestClientDoFunc) nextHook() func(string) bool {
@@ -343,7 +359,8 @@ func (s *GenerationSuite) TestGenerateFuncNextHookMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateFuncHistoryMethod(t sweet.T) {
-	code := generateFuncHistoryMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateFuncHistoryMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// History returns a sequence of TestClientDoFuncCall objects describing the
@@ -355,7 +372,8 @@ func (s *GenerationSuite) TestGenerateFuncHistoryMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateCallStruct(t sweet.T) {
-	code := generateCallStruct(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateCallStruct(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// TestClientDoFuncCall is an object that describes an invocation of method
@@ -372,7 +390,8 @@ func (s *GenerationSuite) TestGenerateCallStruct(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateCallStructVariadic(t sweet.T) {
-	code := generateCallStruct(makeMethod(TestMethodDof))
+	g := &generator{""}
+	code := g.generateCallStruct(makeMethod(TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// TestClientDofFuncCall is an object that describes an invocation of method
@@ -392,7 +411,8 @@ func (s *GenerationSuite) TestGenerateCallStructVariadic(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateCallArgMethod(t sweet.T) {
-	code := generateCallArgsMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateCallArgsMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// Args returns an interface slice containing the arguments of this
@@ -404,7 +424,8 @@ func (s *GenerationSuite) TestGenerateCallArgMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateCallArgsMethodVariadic(t sweet.T) {
-	code := generateCallArgsMethod(makeMethod(TestMethodDof))
+	g := &generator{""}
+	code := g.generateCallArgsMethod(makeMethod(TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// Args returns an interface slice containing the arguments of this
@@ -423,7 +444,8 @@ func (s *GenerationSuite) TestGenerateCallArgsMethodVariadic(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateCallResultsMethod(t sweet.T) {
-	code := generateCallResultsMethod(makeMethod(TestMethodDo))
+	g := &generator{""}
+	code := g.generateCallResultsMethod(makeMethod(TestMethodDo))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// Results returns an interface slice containing the results of this
@@ -435,7 +457,8 @@ func (s *GenerationSuite) TestGenerateCallResultsMethod(t sweet.T) {
 }
 
 func (s *GenerationSuite) TestGenerateCallResultsMethodMultiple(t sweet.T) {
-	code := generateCallResultsMethod(makeMethod(TestMethodStatus))
+	g := &generator{""}
+	code := g.generateCallResultsMethod(makeMethod(TestMethodStatus))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// Results returns an interface slice containing the results of this
@@ -463,7 +486,8 @@ func makeBareInterface(methods ...*types.Method) *types.Interface {
 }
 
 func makeInterface(methods ...*types.Method) *wrappedInterface {
-	return wrapInterface(makeBareInterface(methods...), TestPrefix, TestTitleName, TestMockStructName)
+	g := &generator{""}
+	return g.wrapInterface(makeBareInterface(methods...), TestPrefix, TestTitleName, TestMockStructName)
 }
 
 func makeMethod(methods ...*types.Method) (*wrappedInterface, *wrappedMethod) {
