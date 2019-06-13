@@ -206,6 +206,7 @@ func (s *GenerationSuite) TestGenerateFuncStruct(t sweet.T) {
 		defaultHook func(string) bool
 		hooks       []func(string) bool
 		history     []TestClientDoFuncCall
+		mutex       sync.Mutex
 	}
 	`)))
 }
@@ -221,6 +222,7 @@ func (s *GenerationSuite) TestGenerateFuncStructVariadic(t sweet.T) {
 		defaultHook func(string, ...string) bool
 		hooks       []func(string, ...string) bool
 		history     []TestClientDofFuncCall
+		mutex       sync.Mutex
 	}
 	`)))
 }
@@ -234,7 +236,7 @@ func (s *GenerationSuite) TestGenerateFunc(t sweet.T) {
 	// parameter and result values of this invocation.
 	func (m *MockTestClient) Do(v0 string) bool {
 		r0 := m.DoFunc.nextHook()(v0)
-		m.DoFunc.history = append(m.DoFunc.history, TestClientDoFuncCall{v0, r0})
+		m.DoFunc.appendCall(TestClientDoFuncCall{v0, r0})
 		return r0
 	}
 	`)))
@@ -249,7 +251,7 @@ func (s *GenerationSuite) TestGenerateFuncVariadic(t sweet.T) {
 	// parameter and result values of this invocation.
 	func (m *MockTestClient) Dof(v0 string, v1 ...string) bool {
 		r0 := m.DofFunc.nextHook()(v0, v1...)
-		m.DofFunc.history = append(m.DofFunc.history, TestClientDofFuncCall{v0, v1, r0})
+		m.DofFunc.appendCall(TestClientDofFuncCall{v0, v1, r0})
 		return r0
 	}
 	`)))
@@ -291,7 +293,9 @@ func (s *GenerationSuite) TestGenerateFuncPushHookMethod(t sweet.T) {
 	// front of the queue and discards it. After the queue is empty, the default
 	// hook function is invoked for any future action.
 	func (f *TestClientDoFunc) PushHook(hook func(string) bool) {
+		f.mutex.Lock()
 		f.hooks = append(f.hooks, hook)
+		f.mutex.Unlock()
 	}
 	`)))
 }
@@ -306,7 +310,9 @@ func (s *GenerationSuite) TestGenerateFuncPushHookMethodVariadic(t sweet.T) {
 	// front of the queue and discards it. After the queue is empty, the default
 	// hook function is invoked for any future action.
 	func (f *TestClientDofFunc) PushHook(hook func(string, ...string) bool) {
+		f.mutex.Lock()
 		f.hooks = append(f.hooks, hook)
+		f.mutex.Unlock()
 	}
 	`)))
 }
@@ -347,6 +353,9 @@ func (s *GenerationSuite) TestGenerateFuncNextHookMethod(t sweet.T) {
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	func (f *TestClientDoFunc) nextHook() func(string) bool {
+		f.mutex.Lock()
+		defer f.mutex.Unlock()
+
 		if len(f.hooks) == 0 {
 			return f.defaultHook
 		}
@@ -354,6 +363,19 @@ func (s *GenerationSuite) TestGenerateFuncNextHookMethod(t sweet.T) {
 		hook := f.hooks[0]
 		f.hooks = f.hooks[1:]
 		return hook
+	}
+	`)))
+}
+
+func (s *GenerationSuite) TestGenerateFuncAppendCallMethod(t sweet.T) {
+	g := &generator{""}
+	code := g.generateFuncAppendCallMethod(makeMethod(TestMethodDo))
+
+	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
+	func (f *TestClientDoFunc) appendCall(r0 TestClientDoFuncCall) {
+		f.mutex.Lock()
+		f.history = append(f.history, r0)
+		f.mutex.Unlock()
 	}
 	`)))
 }
@@ -366,7 +388,12 @@ func (s *GenerationSuite) TestGenerateFuncHistoryMethod(t sweet.T) {
 	// History returns a sequence of TestClientDoFuncCall objects describing the
 	// invocations of this function.
 	func (f *TestClientDoFunc) History() []TestClientDoFuncCall {
-		return f.history
+		f.mutex.Lock()
+		history := make([]TestClientDoFuncCall, len(f.history))
+		copy(history, f.history)
+		f.mutex.Unlock()
+
+		return history
 	}
 	`)))
 }

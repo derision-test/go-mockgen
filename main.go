@@ -106,6 +106,7 @@ func (g *generator) generateInterface(file *jen.File, iface *types.Interface, pr
 		g.generateFuncSetReturnMethod,
 		g.generateFuncPushReturnMethod,
 		g.generateFuncNextHookMethod,
+		g.generateFuncAppendCallMethod,
 		g.generateFuncHistoryMethod,
 		g.generateCallStruct,
 		g.generateCallArgsMethod,
@@ -332,6 +333,7 @@ func (g *generator) generateFuncStruct(iface *wrappedInterface, method *wrappedM
 
 	defaultHookField := generation.Compose(jen.Id("defaultHook"), method.signature)
 	hooksField := generation.Compose(jen.Id("hooks").Index(), method.signature)
+	mutexField := jen.Id("mutex").Qual("sync", "Mutex")
 
 	historyField := jen.
 		Id("history").
@@ -341,7 +343,7 @@ func (g *generator) generateFuncStruct(iface *wrappedInterface, method *wrappedM
 	return comment.
 		Type().
 		Id(name).
-		Struct(defaultHookField, hooksField, historyField)
+		Struct(defaultHookField, hooksField, historyField, mutexField)
 }
 
 func (g *generator) generateFunc(iface *wrappedInterface, method *wrappedMethod) jen.Code {
@@ -351,7 +353,7 @@ func (g *generator) generateFunc(iface *wrappedInterface, method *wrappedMethod)
 		method.Name,
 	)
 
-	callTarget := jen.
+	hook := jen.
 		Id("m").
 		Dot(fmt.Sprintf(funcFieldFormat, method.Name)).
 		Dot("nextHook").
@@ -368,20 +370,19 @@ func (g *generator) generateFunc(iface *wrappedInterface, method *wrappedMethod)
 		names = append(names, jen.Id(fmt.Sprintf(resultVarFormat, i)))
 	}
 
-	historyInstance := jen.Id(callInstanceStructName).Values(names...)
-
-	appendHistory := selfAppend(
-		jen.Id("m").Dot(fmt.Sprintf(funcFieldFormat, method.Name)).Dot("history"),
-		historyInstance,
-	)
+	appendFuncCall := jen.
+		Id("m").
+		Dot(fmt.Sprintf(funcFieldFormat, method.Name)).
+		Dot("appendCall").
+		Call(jen.Id(callInstanceStructName).Values(names...))
 
 	methodDecl := generation.GenerateOverride(
 		jen.Id("m").Op("*").Id(iface.mockStructName),
 		method.iface.ImportPath,
 		g.outputImportPath,
 		method.Method,
-		generation.GenerateDecoratedCall(method.Method, callTarget),
-		appendHistory,
+		generation.GenerateDecoratedCall(method.Method, hook),
+		appendFuncCall,
 		generation.GenerateDecoratedReturn(method.Method),
 	)
 
@@ -415,12 +416,26 @@ func (g *generator) generateFuncPushHookMethod(iface *wrappedInterface, method *
 		iface.mockStructName,
 	)
 
+	lock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Lock").
+		Call()
+
+	unlock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Unlock").
+		Call()
+
 	methodDecl := generation.GenerateMethod(
 		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
 		"PushHook",
 		[]jen.Code{generation.Compose(jen.Id("hook"), method.signature)},
 		nil,
+		lock,
 		selfAppend(jen.Id("f").Dot("hooks"), jen.Id("hook")),
+		unlock,
 	)
 
 	return generation.Compose(comment, methodDecl)
@@ -473,6 +488,19 @@ func (g *generator) generateFuncNextHookMethod(iface *wrappedInterface, method *
 		If(jen.Len(jen.Id("f").Dot("hooks")).Op("==").Lit(0)).
 		Block(jen.Return(jen.Id("f").Dot("defaultHook")))
 
+	lock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Lock").
+		Call()
+
+	deferUnlock := jen.
+		Defer().
+		Id("f").
+		Dot("mutex").
+		Dot("Unlock").
+		Call()
+
 	getFirstHook := jen.
 		Id("hook").
 		Op(":=").
@@ -493,11 +521,38 @@ func (g *generator) generateFuncNextHookMethod(iface *wrappedInterface, method *
 		"nextHook",
 		nil,
 		[]jen.Code{method.signature},
+		lock,
+		deferUnlock,
+		jen.Line(),
 		returnDefaultIfEmpty,
 		jen.Line(),
 		getFirstHook,
 		popHook,
 		jen.Return(jen.Id("hook")),
+	)
+}
+
+func (g *generator) generateFuncAppendCallMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
+	lock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Lock").
+		Call()
+
+	unlock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Unlock").
+		Call()
+
+	return generation.GenerateMethod(
+		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
+		"appendCall",
+		[]jen.Code{generation.Compose(jen.Id("r0"), jen.Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)))},
+		nil,
+		lock,
+		selfAppend(jen.Id("f").Dot("history"), jen.Id("r0")),
+		unlock,
 	)
 }
 
@@ -508,12 +563,42 @@ func (g *generator) generateFuncHistoryMethod(iface *wrappedInterface, method *w
 		fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name),
 	)
 
+	lock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Lock").
+		Call()
+
+	unlock := jen.
+		Id("f").
+		Dot("mutex").
+		Dot("Unlock").
+		Call()
+
+	declareCopy := jen.
+		Id("history").
+		Op(":=").
+		Make(
+			jen.Index().Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name)),
+			jen.Len(jen.Id("f").Dot("history")),
+		)
+
+	doCopy := jen.Copy(
+		jen.Id("history"),
+		jen.Id("f").Dot("history"),
+	)
+
 	methodDecl := generation.GenerateMethod(
 		jen.Id("f").Op("*").Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)),
 		"History",
 		nil,
 		[]jen.Code{jen.Index().Id(fmt.Sprintf(callStructFormat, iface.prefix, iface.titleName, method.Name))},
-		jen.Return().Id("f").Dot("history"),
+		lock,
+		declareCopy,
+		doCopy,
+		unlock,
+		jen.Line(),
+		jen.Return().Id("history"),
 	)
 
 	return generation.Compose(comment, methodDecl)
