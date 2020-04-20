@@ -8,7 +8,6 @@ language: go
 go:
   - 1.11.x
   - tip
-install: go mod vendor
 script:
   - ./build-test-fixtures.sh
   - go test -mod vendor -coverprofile=c.out -covermode=atomic
