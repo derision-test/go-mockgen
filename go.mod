@@ -7,7 +7,7 @@ require (
 	github.com/aphistic/sweet-junit v0.0.0-20190314030539-8d7e248096c2
 	github.com/dave/jennifer v1.4.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/efritz/go-genlib v0.0.0-20200420145409-8a873dbb21a3
+	github.com/efritz/go-genlib v0.0.0-20200420163202-9c3914df9594
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.7 // indirect
