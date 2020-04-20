@@ -7,15 +7,22 @@
 
 A mock interface code generator.
 
-## Testing with Mocks
-
-More usage documentation coming soon.
-
 ## Generating Mocks
 
 Install with `go get -u github.com/efritz/go-mockgen/...`.
 
-More usage documentation coming soon.
+Mocks should be generated via `go generate` and should be regenerated on each update to the target interface. For example, in `gen.go`:
+
+```go
+package mocks
+
+//go:generate go-mockgen -f github.com/example/package -i ExampleInterface -o mock_example_interface_test.go
+```
+
+Depending on how you prefer to structure your code, you can either
+
+1. generate mocks next to the implementation (as a siblign or in a sibling `mocks` package), or
+2. generate mocks as needed in test code (generating them into a `_test.go` file).
 
 ### Flags
 
@@ -32,9 +39,102 @@ The following flags are defined by the binary.
 
 If neither dirname nor filename are supplied, then the generated code is printed to standard out.
 
+## Testing with Mocks
+
+A mock value fulfills all of the methods of the target interface from which it was generated. Unless overridden, all methods of the mock will return zero values for everything. To override a specific method, you can set its `hook` or its `return values`.
+
+A hook is a method that is called on each invocation and allows the test to specify complex behaviors in the mocked interface (conditionally returning values, synchronizing on external state, etc,). The default hook for a method is set with the `SetDefaultHook` method.
+
+```go
+func TestCache(t *testing.T) {
+    cache := mocks.NewMockCache()
+    cache.GetFunc.SetDefaultHook(func (key string) (interface{}, bool) {
+        if key == "expected" {
+            return 42, true
+        }
+        return nil, false
+    })
+
+    testSubject := NewThingThatNeedsCache(cache)
+    // ...
+}
+```
+
+In the cases where you don't need specific behaviors but just need to return some data, the setup gets a bit easier with `SetDefaultReturn`.
+
+```go
+func TestCache(t *testing.T) {
+    cache := mocks.NewMockCache()
+    cache.GetFunc.SetDefaultReturn(42, true)
+
+    testSubject := NewThingThatNeedsCache(cache)
+    // ...
+}
+```
+
+Hook and return values can also be *stacked* when your test can anticipate multiple calls to the same function. Pushing a hook or a return value will set the hook or return value for *one* invocation of the mocked method. Once this hook or return value has been spent, it will be removed from the queue. Hooks and return values can be interleaved. If the queue is empty, the default hook will be invoked (or the default return values returned).
+
+The following example will test a cache that returns values 50, 51, and 52 in sequence, then panic if there is an unexpected fourth call.
+
+```go
+func TestCache(t *testing.T) {
+    cache := mocks.NewMockCache()
+    cache.GetFunc.SetDefaultHook(func (key string) (interface{}, bool) {
+        panic("unexpected call")
+    })
+    cache.GetFunc.PushReturn(50, true)
+    cache.GetFunc.PushReturn(51, true)
+    cache.GetFunc.PushReturn(52, true)
+
+    testSubject := NewThingThatNeedsCache(cache)
+    // ...
+}
+```
+
+### Assertions
+
+Mocks track their invocations and can be retrieved via the `History` method. Structs are generated for each method type containing fields for each argument and result type. Raw assertions can be performed on these values.
+
+```go
+allCalls := cache.GetFunc.History()
+allCalls[0].Arg0 // key
+allCalls[0].Result0 // value
+allCalls[0].Result1 // exists flag
+```
+
+This library also contains a set of [Gomega](https://onsi.github.io/gomega/) matchers which simplify assertions over a mocked method's call history.
+
+To use the matchers, import the matchers package anonymously.
+
+```go
+import . "github.com/efritz/go-mockgen/matchers"
+```
+
+The following matchers are defined.
+
+- `BeCalled()`
+- `BeCalledN(n)`
+- `BeCalledOnce()`
+- `BeCalledWith(args...)`
+- `BeCalledOnceWith(args...)`
+- `BeAnything()`
+
+These matchers can be used as follows.
+
+```go
+// cache.Get called 3 times
+Expect(cache.GetFunc).To(BeCalledN(3)) 
+
+// Ensure cache.Set("foo", "bar") was called
+Expect(cache.SetFunc).To(BeCalledWith("foo", "bar")) 
+
+// Ensure cache.Set("foo", _) was called
+Expect(cache.SetFunc).To(BeCalledWith("foo", BeAnything())) 
+```
+
 ## License
 
-Copyright (c) 2018 Eric Fritz
+Copyright (c) 2020 Eric Fritz
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
