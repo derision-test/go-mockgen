@@ -92,8 +92,8 @@ func (s *GenerationSuite) TestGenerateMockStruct(t sweet.T) {
 	code := g.generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
-	// MockTestClient is a mock impelementation of the Client interface (from
-	// the package github.com/efritz/go-mockgen/test) used for unit testing.
+	// MockTestClient is a mock implementation of the Client interface (from the
+	// package github.com/efritz/go-mockgen/test) used for unit testing.
 	type MockTestClient struct {
 		// StatusFunc is an instance of a mock function object controlling the
 		// behavior of the method Status.

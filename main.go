@@ -160,7 +160,7 @@ func (g *generator) wrapMethod(iface *types.Interface, method *types.Method) *wr
 func (g *generator) generateMockStruct(iface *wrappedInterface) jen.Code {
 	comment := generation.GenerateComment(
 		1,
-		"%s is a mock impelementation of the %s interface (from the package %s) used for unit testing.",
+		"%s is a mock implementation of the %s interface (from the package %s) used for unit testing.",
 		iface.mockStructName,
 		iface.Name,
 		iface.ImportPath,
