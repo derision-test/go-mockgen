@@ -411,7 +411,7 @@ func (g *generator) generateFuncSetHookMethod(iface *wrappedInterface, method *w
 func (g *generator) generateFuncPushHookMethod(iface *wrappedInterface, method *wrappedMethod) jen.Code {
 	comment := generation.GenerateComment(
 		1,
-		"PushHook adds a function to the end of hook queue. Each invocation of the %s method of the parent %s instance inovkes the hook at the front of the queue and discards it. After the queue is empty, the default hook function is invoked for any future action.",
+		"PushHook adds a function to the end of hook queue. Each invocation of the %s method of the parent %s instance invokes the hook at the front of the queue and discards it. After the queue is empty, the default hook function is invoked for any future action.",
 		method.Name,
 		iface.mockStructName,
 	)

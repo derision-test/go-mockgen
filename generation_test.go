@@ -289,7 +289,7 @@ func (s *GenerationSuite) TestGenerateFuncPushHookMethod(t sweet.T) {
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// PushHook adds a function to the end of hook queue. Each invocation of the
-	// Do method of the parent MockTestClient instance inovkes the hook at the
+	// Do method of the parent MockTestClient instance invokes the hook at the
 	// front of the queue and discards it. After the queue is empty, the default
 	// hook function is invoked for any future action.
 	func (f *TestClientDoFunc) PushHook(hook func(string) bool) {
@@ -306,7 +306,7 @@ func (s *GenerationSuite) TestGenerateFuncPushHookMethodVariadic(t sweet.T) {
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// PushHook adds a function to the end of hook queue. Each invocation of the
-	// Dof method of the parent MockTestClient instance inovkes the hook at the
+	// Dof method of the parent MockTestClient instance invokes the hook at the
 	// front of the queue and discards it. After the queue is empty, the default
 	// hook function is invoked for any future action.
 	func (f *TestClientDofFunc) PushHook(hook func(string, ...string) bool) {
