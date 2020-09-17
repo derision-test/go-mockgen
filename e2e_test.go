@@ -7,8 +7,8 @@ import (
 	. "github.com/efritz/go-mockgen/matchers"
 	. "github.com/onsi/gomega"
 
-	e2etests "github.com/efritz/go-mockgen/internal/e2e-tests"
-	"github.com/efritz/go-mockgen/internal/e2e-tests/mocks"
+	e2etests "github.com/efritz/go-mockgen/internal/testdata"
+	"github.com/efritz/go-mockgen/internal/testdata/mocks"
 )
 
 type E2ESuite struct{}
