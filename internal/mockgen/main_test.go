@@ -1,10 +1,10 @@
-package main
+package mockgen
 
 import (
 	"testing"
 
 	"github.com/aphistic/sweet"
-	"github.com/aphistic/sweet-junit"
+	junit "github.com/aphistic/sweet-junit"
 	. "github.com/onsi/gomega"
 )
 
@@ -14,7 +14,6 @@ func TestMain(m *testing.M) {
 	sweet.Run(m, func(s *sweet.S) {
 		s.RegisterPlugin(junit.NewPlugin())
 
-		s.AddSuite(&E2ESuite{})
 		s.AddSuite(&UtilSuite{})
 		s.AddSuite(&GenerationSuite{})
 	})

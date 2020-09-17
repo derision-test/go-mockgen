@@ -1,4 +1,4 @@
-package main
+package mockgen
 
 import (
 	"github.com/aphistic/sweet"
