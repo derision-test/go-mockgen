@@ -7,7 +7,7 @@ import (
 
 	"github.com/aphistic/sweet"
 	"github.com/dave/jennifer/jen"
-	"github.com/efritz/go-genlib/types"
+	"github.com/efritz/go-mockgen/internal/genlib/types"
 	. "github.com/onsi/gomega"
 )
 

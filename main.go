@@ -8,9 +8,9 @@ import (
 
 	"github.com/dave/jennifer/jen"
 	"github.com/dustin/go-humanize"
-	"github.com/efritz/go-genlib/command"
-	"github.com/efritz/go-genlib/generation"
-	"github.com/efritz/go-genlib/types"
+	"github.com/efritz/go-mockgen/internal/genlib/command"
+	"github.com/efritz/go-mockgen/internal/genlib/generation"
+	"github.com/efritz/go-mockgen/internal/genlib/types"
 )
 
 type (
