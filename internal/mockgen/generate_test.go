@@ -518,6 +518,12 @@ func TestGenerateCallResultsMethodMultiple(t *testing.T) {
 	assert.Equal(t, expected, fmt.Sprintf("%#v", code))
 }
 
+func TestTitle(t *testing.T) {
+	assert.Equal(t, "", title(""))
+	assert.Equal(t, "Foobar", title("foobar"))
+	assert.Equal(t, "FooBar", title("fooBar"))
+}
+
 //
 // Helpers
 
