@@ -1,78 +1,73 @@
 package matchers
 
 import (
-	"github.com/aphistic/sweet"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type CalledMatcherSuite struct{}
-
-func (s *CalledMatcherSuite) TestMatch(t sweet.T) {
+func TestCalledMatch(t *testing.T) {
 	ok, err := BeCalled().Match(litFunc{[]litCall{{}}})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeTrue())
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
 
-func (s *CalledMatcherSuite) TestMatchEmptyHistory(t sweet.T) {
+func TestCalledMatchEmptyHistory(t *testing.T) {
 	ok, err := BeCalled().Match(litFunc{})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledMatcherSuite) TestMatchError(t sweet.T) {
+func TestCalledMatchError(t *testing.T) {
 	_, err := BeCalled().Match(nil)
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(HavePrefix("BeCalled expects a mock function"))
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "BeCalled expects a mock function")
 }
 
-type CalledNMatcherSuite struct{}
-
-func (s *CalledNMatcherSuite) TestMatch(t sweet.T) {
+func TestCalledNMatch(t *testing.T) {
 	ok, err := BeCalledN(2).Match(litFunc{[]litCall{{}, {}}})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeTrue())
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
 
-func (s *CalledNMatcherSuite) TestMatchEmptyHistory(t sweet.T) {
+func TestCalledNMatchEmptyHistory(t *testing.T) {
 	ok, err := BeCalledN(1).Match(litFunc{})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledNMatcherSuite) TestMatchMismatchedHistory(t sweet.T) {
+func TestCalledNMatchMismatchedHistory(t *testing.T) {
 	ok, err := BeCalledN(1).Match(litFunc{[]litCall{{}, {}}})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledNMatcherSuite) TestMatchError(t sweet.T) {
+func TestCalledNMatchError(t *testing.T) {
 	_, err := BeCalledN(1).Match(nil)
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(HavePrefix("BeCalledN expects a mock function"))
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "BeCalledN expects a mock function")
 }
 
-type CalledOnceMatcherSuite struct{}
-
-func (s *CalledOnceMatcherSuite) TestMatch(t sweet.T) {
+func TestCalledOnceMatch(t *testing.T) {
 	ok, err := BeCalledOnce().Match(litFunc{[]litCall{{}}})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeTrue())
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
 
-func (s *CalledOnceMatcherSuite) TestMatchEmptyHistory(t sweet.T) {
+func TestCalledOnceMatchEmptyHistory(t *testing.T) {
 	ok, err := BeCalledOnce().Match(litFunc{})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledOnceMatcherSuite) TestMatchMismatchedHistory(t sweet.T) {
+func TestCalledOnceMatchMismatchedHistory(t *testing.T) {
 	ok, err := BeCalledOnce().Match(litFunc{[]litCall{{}, {}}})
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledOnceMatcherSuite) TestMatchError(t sweet.T) {
+func TestCalledOnceMatchError(t *testing.T) {
 	_, err := BeCalledOnce().Match(nil)
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(HavePrefix("BeCalledOnce expects a mock function"))
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "BeCalledOnce expects a mock function")
 }

@@ -1,14 +1,13 @@
 package mockgen
 
 import (
-	"github.com/aphistic/sweet"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type UtilSuite struct{}
-
-func (s *UtilSuite) TestTitle(t sweet.T) {
-	Expect(title("")).To(Equal(""))
-	Expect(title("foobar")).To(Equal("Foobar"))
-	Expect(title("fooBar")).To(Equal("FooBar"))
+func TestTitle(t *testing.T) {
+	assert.Equal(t, "", title(""))
+	assert.Equal(t, "Foobar", title("foobar"))
+	assert.Equal(t, "FooBar", title("fooBar"))
 }

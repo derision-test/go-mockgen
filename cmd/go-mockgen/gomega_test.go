@@ -2,33 +2,38 @@ package main
 
 import (
 	"fmt"
+	"testing"
 
-	"github.com/aphistic/sweet"
 	"github.com/derision-test/go-mockgen/internal/testdata"
 	"github.com/derision-test/go-mockgen/internal/testdata/mocks"
 	. "github.com/derision-test/go-mockgen/testutil/gomega"
 	. "github.com/onsi/gomega"
 )
 
-type BinaryTestSuite struct{}
+func TestGomegaCalls(t *testing.T) {
+	RegisterTestingT(t)
 
-func (s *BinaryTestSuite) TestCalls(t sweet.T) {
 	mock := mocks.NewMockClient()
 	Expect(mock.CloseFunc).NotTo(BeCalled())
 	Expect(mock.Close()).To(BeNil())
 	Expect(mock.CloseFunc).To(BeCalled())
 	Expect(mock.CloseFunc).To(BeCalledOnce())
-	Expect(mock.CloseFunc).To(BeCalledWith())
 }
 
-func (s *BinaryTestSuite) TestCallsWithArgs(t sweet.T) {
+func TestGomegaCallsWithArgs(t *testing.T) {
+	RegisterTestingT(t)
+
 	mock := mocks.NewMockClient()
 	mock.Do("foo")
 	Expect(mock.DoFunc).To(BeCalled())
+	Expect(mock.DoFunc).To(BeCalledOnce())
 	Expect(mock.DoFunc).To(BeCalledWith("foo"))
+	Expect(mock.DoFunc).NotTo(BeCalledWith("bar"))
 }
 
-func (s *BinaryTestSuite) TestCallsWithVariadicArgs(t sweet.T) {
+func TestGomegaCallsWithVariadicArgs(t *testing.T) {
+	RegisterTestingT(t)
+
 	mock := mocks.NewMockClient()
 	mock.DoArgs("foo", 1, 2, 3)
 	Expect(mock.DoArgsFunc).To(BeCalledWith("foo", 1, 2, 3))
@@ -37,13 +42,15 @@ func (s *BinaryTestSuite) TestCallsWithVariadicArgs(t sweet.T) {
 	mock.DoArgs("bar", 42)
 	mock.DoArgs("baz")
 	Expect(mock.DoArgsFunc).To(BeCalledN(3))
-	Expect(mock.DoArgsFunc).To(BeCalledOnceWith(ContainSubstring("a")))
+	Expect(mock.DoArgsFunc).To(BeCalledNWith(2, ContainSubstring("a")))
 
 	// Mismatched variadic arg
 	Expect(mock.DoArgsFunc).NotTo(BeCalledWith("baz", BeAnything()))
 }
 
-func (s *BinaryTestSuite) TestPushHook(t sweet.T) {
+func TestGomegaPushHook(t *testing.T) {
+	RegisterTestingT(t)
+
 	child1 := mocks.NewMockChild()
 	child2 := mocks.NewMockChild()
 	child3 := mocks.NewMockChild()
@@ -52,27 +59,30 @@ func (s *BinaryTestSuite) TestPushHook(t sweet.T) {
 	parent.GetChildFunc.PushHook(func(i int) (testdata.Child, error) { return child1, nil })
 	parent.GetChildFunc.PushHook(func(i int) (testdata.Child, error) { return child2, nil })
 	parent.GetChildFunc.PushHook(func(i int) (testdata.Child, error) { return child3, nil })
-
 	parent.GetChildFunc.SetDefaultHook(func(i int) (testdata.Child, error) {
-		return nil, fmt.Errorf("utoh")
+		return nil, fmt.Errorf("uh-oh")
 	})
 
-	Expect(parent.GetChild(0)).To(Equal(child1))
-	Expect(parent.GetChild(0)).To(Equal(child2))
-	Expect(parent.GetChild(0)).To(Equal(child3))
+	for _, expected := range []interface{}{child1, child2, child3} {
+		Expect(parent.GetChild(0)).To(Equal(expected))
+	}
 
 	_, err := parent.GetChild(0)
-	Expect(err).To(MatchError("utoh"))
+	Expect(err).To(MatchError("uh-oh"))
 }
 
-func (s *BinaryTestSuite) TestSetDefaultReturn(t sweet.T) {
+func TestGomegaSetDefaultReturn(t *testing.T) {
+	RegisterTestingT(t)
+
 	parent := mocks.NewMockParent()
-	parent.GetChildFunc.SetDefaultReturn(nil, fmt.Errorf("utoh"))
+	parent.GetChildFunc.SetDefaultReturn(nil, fmt.Errorf("uh-oh"))
 	_, err := parent.GetChild(0)
-	Expect(err).To(MatchError("utoh"))
+	Expect(err).To(MatchError("uh-oh"))
 }
 
-func (s *BinaryTestSuite) TestPushReturn(t sweet.T) {
+func TestGomegaPushReturn(t *testing.T) {
+	RegisterTestingT(t)
+
 	parent := mocks.NewMockParent()
 	parent.GetChildrenFunc.PushReturn([]testdata.Child{nil})
 	parent.GetChildrenFunc.PushReturn([]testdata.Child{nil, nil})

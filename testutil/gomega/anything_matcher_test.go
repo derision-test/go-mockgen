@@ -1,14 +1,13 @@
 package matchers
 
 import (
-	"github.com/aphistic/sweet"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type AnythingMatcherSuite struct{}
-
-func (s *AnythingMatcherSuite) TestMatch(t sweet.T) {
+func TestAnythingMatch(t *testing.T) {
 	ok, err := BeAnything().Match(nil)
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeTrue())
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }

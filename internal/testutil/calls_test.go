@@ -1,13 +1,12 @@
 package testutil
 
 import (
-	"github.com/aphistic/sweet"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type TypeSupportSuite struct{}
-
-func (s *TypeSupportSuite) TestGetCallHistory(t sweet.T) {
+func TestGetCallHistory(t *testing.T) {
 	m := litFunc{[]litCall{
 		{args: []interface{}{"foo", "bar"}},
 		{args: []interface{}{"foo", "bar", "baz"}},
@@ -17,11 +16,11 @@ func (s *TypeSupportSuite) TestGetCallHistory(t sweet.T) {
 	}}
 
 	history, ok := GetCallHistory(m)
-	Expect(ok).To(BeTrue())
-	Expect(history).To(HaveLen(5))
+	assert.True(t, ok)
+	assert.Len(t, history, 5)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryWith(t sweet.T) {
+func TestGetCallHistoryWith(t *testing.T) {
 	m := litFunc{[]litCall{
 		{args: []interface{}{"foo", "bar"}},
 		{args: []interface{}{"foo", "bar", "baz"}},
@@ -31,56 +30,56 @@ func (s *TypeSupportSuite) TestGetCallHistoryWith(t sweet.T) {
 	}}
 
 	matchingHistory, ok := GetCallHistoryWith(m, func(v CallInstance) bool { return len(v.Args()) == 3 })
-	Expect(ok).To(BeTrue())
-	Expect(matchingHistory).To(HaveLen(3))
+	assert.True(t, ok)
+	assert.Len(t, matchingHistory, 3)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryNil(t sweet.T) {
+func TestGetCallHistoryNil(t *testing.T) {
 	_, ok := GetCallHistory(nil)
-	Expect(ok).To(BeFalse())
+	assert.False(t, ok)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryNoHistoryMethod(t sweet.T) {
-	_, ok := GetCallHistory(&TestNoHistory{})
-	Expect(ok).To(BeFalse())
+func TestGetCallHistoryNoHistoryMethod(t *testing.T) {
+	_, ok := GetCallHistory(&testNoHistory{})
+	assert.False(t, ok)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryBadParamArity(t sweet.T) {
-	_, ok := GetCallHistory(&TestHistoryBadParamArity{})
-	Expect(ok).To(BeFalse())
+func TestGetCallHistoryBadParamArity(t *testing.T) {
+	_, ok := GetCallHistory(&testHistoryBadParamArity{})
+	assert.False(t, ok)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryBadResultArity(t sweet.T) {
-	_, ok := GetCallHistory(&TestHistoryBadResultArity{})
-	Expect(ok).To(BeFalse())
+func TestGetCallHistoryBadResultArity(t *testing.T) {
+	_, ok := GetCallHistory(&testHistoryBadResultArity{})
+	assert.False(t, ok)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryNonSliceResult(t sweet.T) {
-	_, ok := GetCallHistory(&TestGetCallHistoryNonSliceResult{})
-	Expect(ok).To(BeFalse())
+func TestGetCallHistoryNonSliceResult(t *testing.T) {
+	_, ok := GetCallHistory(&testGetCallHistoryNonSliceResult{})
+	assert.False(t, ok)
 }
 
-func (s *TypeSupportSuite) TestGetCallHistoryBadSliceTypes(t sweet.T) {
-	_, ok := GetCallHistory(&TestGetCallHistoryBadSliceTypes{})
-	Expect(ok).To(BeFalse())
+func TestGetCallHistoryBadSliceTypes(t *testing.T) {
+	_, ok := GetCallHistory(&testGetCallHistoryBadSliceTypes{})
+	assert.False(t, ok)
 }
 
 //
 // Helpers
 
 type (
-	TestNoHistory                    struct{}
-	TestHistoryBadParamArity         struct{}
-	TestHistoryBadResultArity        struct{}
-	TestGetCallHistoryNonSliceResult struct{}
-	TestGetCallHistoryBadSliceTypes  struct{}
+	testNoHistory                    struct{}
+	testHistoryBadParamArity         struct{}
+	testHistoryBadResultArity        struct{}
+	testGetCallHistoryNonSliceResult struct{}
+	testGetCallHistoryBadSliceTypes  struct{}
 	halfCallInstance                 struct{}
 )
 
-func (h *TestHistoryBadParamArity) History(n int) []CallInstance       { return nil }
-func (h *TestHistoryBadResultArity) History() ([]CallInstance, error)  { return nil, nil }
-func (h *TestGetCallHistoryNonSliceResult) History() string            { return "" }
-func (h *TestGetCallHistoryBadSliceTypes) History() []halfCallInstance { return nil }
+func (h *testHistoryBadParamArity) History(n int) []CallInstance       { return nil }
+func (h *testHistoryBadResultArity) History() ([]CallInstance, error)  { return nil, nil }
+func (h *testGetCallHistoryNonSliceResult) History() string            { return "" }
+func (h *testGetCallHistoryBadSliceTypes) History() []halfCallInstance { return nil }
 func (h *halfCallInstance) Args() []interface{}                        { return nil }
 
 //
