@@ -1,6 +1,6 @@
 # go-mockgen
 
-[![GoDoc](https://godoc.org/github.com/derision-test/go-mockgen?status.svg)](https://godoc.org/github.com/derision-test/go-mockgen)
+[![PkgGoDev](https://pkg.go.dev/badge/mod/github.com/derision-test/go-mockgen)](https://pkg.go.dev/mod/github.com/derision-test/go-mockgen)
 
 A mock interface code generator.
 
