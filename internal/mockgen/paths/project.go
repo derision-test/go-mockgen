@@ -9,10 +9,8 @@ import (
 	"strings"
 )
 
-var (
-	srcpath       = filepath.Join(Gopath(), "src")
-	modulePattern = regexp.MustCompile(`^module\s+(.+)$`)
-)
+var srcpath = filepath.Join(Gopath(), "src")
+var modulePattern = regexp.MustCompile(`^module\s+(.+)$`)
 
 func InferImportPath(dirname string) (string, bool) {
 	if module, wd, ok := Module(dirname); ok {

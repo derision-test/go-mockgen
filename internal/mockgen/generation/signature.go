@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/derision-test/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 )
 
 func GenerateFunction(methodName string, params, results []jen.Code, body ...jen.Code) jen.Code {
