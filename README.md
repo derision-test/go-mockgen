@@ -1,15 +1,12 @@
 # go-mockgen
 
-[![GoDoc](https://godoc.org/github.com/efritz/go-mockgen?status.svg)](https://godoc.org/github.com/efritz/go-mockgen)
-[![Build Status](https://secure.travis-ci.org/efritz/go-mockgen.png)](http://travis-ci.org/efritz/go-mockgen)
-[![Maintainability](https://api.codeclimate.com/v1/badges/8546037d609e215de82d/maintainability)](https://codeclimate.com/github/efritz/go-mockgen/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/8546037d609e215de82d/test_coverage)](https://codeclimate.com/github/efritz/go-mockgen/test_coverage)
+[![GoDoc](https://godoc.org/github.com/derision-test/go-mockgen?status.svg)](https://godoc.org/github.com/derision-test/go-mockgen)
 
 A mock interface code generator.
 
 ## Generating Mocks
 
-Install with `go get -u github.com/efritz/go-mockgen/...`.
+Install with `go get -u github.com/derision-test/go-mockgen/...`.
 
 Mocks should be generated via `go generate` and should be regenerated on each update to the target interface. For example, in `gen.go`:
 
@@ -21,7 +18,7 @@ package mocks
 
 Depending on how you prefer to structure your code, you can either
 
-1. generate mocks next to the implementation (as a siblign or in a sibling `mocks` package), or
+1. generate mocks next to the implementation (as a sibling or in a sibling `mocks` package), or
 2. generate mocks as needed in test code (generating them into a `_test.go` file).
 
 ### Flags
@@ -107,7 +104,7 @@ This library also contains a set of [Gomega](https://onsi.github.io/gomega/) mat
 To use the matchers, import the matchers package anonymously.
 
 ```go
-import . "github.com/efritz/go-mockgen/matchers"
+import . "github.com/derision-test/go-mockgen/matchers"
 ```
 
 The following matchers are defined.

@@ -1,6 +1,6 @@
-module github.com/efritz/go-mockgen
+module github.com/derision-test/go-mockgen
 
-go 1.14
+go 1.15
 
 require (
 	github.com/aphistic/sweet v0.2.0
