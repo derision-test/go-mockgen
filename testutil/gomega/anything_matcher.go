@@ -11,6 +11,7 @@ type anythingMatcher struct {
 	n int
 }
 
+// BeAnything returns a matcher that never fails.
 func BeAnything() types.GomegaMatcher {
 	return &anythingMatcher{}
 }

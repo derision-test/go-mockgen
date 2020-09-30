@@ -104,7 +104,7 @@ This library also contains a set of [Gomega](https://onsi.github.io/gomega/) mat
 To use the matchers, import the matchers package anonymously.
 
 ```go
-import . "github.com/derision-test/go-mockgen/matchers"
+import . "github.com/derision-test/go-mockgen/testutil/gomega"
 ```
 
 The following matchers are defined.
