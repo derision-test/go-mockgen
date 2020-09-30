@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/derision-test/go-mockgen/internal/genlib/extraction"
-	"github.com/derision-test/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/mockgen/extraction"
+	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 )
 
 func Extract(

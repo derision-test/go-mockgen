@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/derision-test/go-mockgen/internal/genlib/paths"
+	"github.com/derision-test/go-mockgen/internal/mockgen/paths"
 )
 
 type Options struct {

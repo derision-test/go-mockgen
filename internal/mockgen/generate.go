@@ -7,9 +7,9 @@ import (
 	"unicode"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/derision-test/go-mockgen/internal/genlib/command"
-	"github.com/derision-test/go-mockgen/internal/genlib/generation"
-	"github.com/derision-test/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/mockgen/command"
+	"github.com/derision-test/go-mockgen/internal/mockgen/generation"
+	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 	"github.com/dustin/go-humanize"
 )
 

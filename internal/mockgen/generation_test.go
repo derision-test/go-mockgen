@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/derision-test/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 	"github.com/stretchr/testify/assert"
 )
 
