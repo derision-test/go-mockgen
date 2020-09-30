@@ -7,7 +7,7 @@ import (
 
 	"github.com/aphistic/sweet"
 	"github.com/dave/jennifer/jen"
-	"github.com/efritz/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 	. "github.com/onsi/gomega"
 )
 
@@ -17,7 +17,7 @@ const (
 	TestPrefix         = "Test"
 	TestTitleName      = "Client"
 	TestMockStructName = "MockTestClient"
-	TestImportPath     = "github.com/efritz/go-mockgen/test"
+	TestImportPath     = "github.com/derision-test/go-mockgen/test"
 )
 
 var (
@@ -93,7 +93,7 @@ func (s *GenerationSuite) TestGenerateMockStruct(t sweet.T) {
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// MockTestClient is a mock implementation of the Client interface (from the
-	// package github.com/efritz/go-mockgen/test) used for unit testing.
+	// package github.com/derision-test/go-mockgen/test) used for unit testing.
 	type MockTestClient struct {
 		// StatusFunc is an instance of a mock function object controlling the
 		// behavior of the method Status.
@@ -169,7 +169,7 @@ func (s *GenerationSuite) TestGenerateMockStructFromConstructorUnexported(t swee
 
 	Expect(fmt.Sprintf("%#v", code)).To(Equal(strip(`
 	// surrogateMockClient is a copy of the client interface (from the package
-	// github.com/efritz/go-mockgen/test). It is redefined here as it is
+	// github.com/derision-test/go-mockgen/test). It is redefined here as it is
 	// unexported in the source packge.
 	type surrogateMockClient interface {
 		Status() (string, bool)

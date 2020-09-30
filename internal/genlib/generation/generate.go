@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/efritz/go-mockgen/internal/genlib/command"
-	"github.com/efritz/go-mockgen/internal/genlib/paths"
-	"github.com/efritz/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/genlib/command"
+	"github.com/derision-test/go-mockgen/internal/genlib/paths"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 )
 
 type (

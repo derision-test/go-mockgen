@@ -3,15 +3,15 @@ package main
 import (
 	"log"
 
-	"github.com/efritz/go-mockgen/internal/genlib/command"
-	"github.com/efritz/go-mockgen/internal/genlib/types"
-	"github.com/efritz/go-mockgen/internal/mockgen"
+	"github.com/derision-test/go-mockgen/internal/genlib/command"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/mockgen"
 )
 
 const (
 	name        = "go-mockgen"
 	description = "go-mockgen generates mock implementations from interface definitions."
-	packageName = "github.com/efritz/go-mockgen"
+	packageName = "github.com/derision-test/go-mockgen"
 	version     = "0.1.0"
 )
 

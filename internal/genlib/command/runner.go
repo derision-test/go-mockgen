@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 
-	"github.com/efritz/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 )
 
 type (

@@ -9,8 +9,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/efritz/go-mockgen/internal/genlib/paths"
-	"github.com/efritz/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/genlib/paths"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 	gopackages "golang.org/x/tools/go/packages"
 )
 

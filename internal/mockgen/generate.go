@@ -6,10 +6,10 @@ import (
 	"unicode"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/derision-test/go-mockgen/internal/genlib/command"
+	"github.com/derision-test/go-mockgen/internal/genlib/generation"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 	"github.com/dustin/go-humanize"
-	"github.com/efritz/go-mockgen/internal/genlib/command"
-	"github.com/efritz/go-mockgen/internal/genlib/generation"
-	"github.com/efritz/go-mockgen/internal/genlib/types"
 )
 
 type (
@@ -39,7 +39,9 @@ type (
 )
 
 const (
-	packageName = "github.com/efritz/go-mockgen"
+	name        = "go-mockgen"
+	packageName = "github.com/derision-test/go-mockgen"
+	description = "go-mockgen generates mock implementations from interface definitions."
 	version     = "0.1.0"
 
 	mockStructFormat  = "Mock%s%s"

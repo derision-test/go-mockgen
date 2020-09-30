@@ -5,7 +5,7 @@ import (
 	"go/token"
 	gotypes "go/types"
 
-	"github.com/efritz/go-mockgen/internal/genlib/types"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 )
 
 type visitor struct {

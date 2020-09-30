@@ -1,4 +1,4 @@
-module github.com/efritz/go-mockgen
+module github.com/derision-test/go-mockgen
 
 go 1.15
 
