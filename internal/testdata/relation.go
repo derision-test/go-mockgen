@@ -1,4 +1,4 @@
-package e2etests
+package testdata
 
 type Parent interface {
 	AddChild(c Child)

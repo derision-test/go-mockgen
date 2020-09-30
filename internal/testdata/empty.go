@@ -1,3 +1,3 @@
-package e2etests
+package testdata
 
 type Empty interface{}

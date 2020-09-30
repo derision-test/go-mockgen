@@ -1,4 +1,4 @@
-package e2etests
+package testdata
 
 type OptionValidator interface {
 	Validate(options ...Option) error
