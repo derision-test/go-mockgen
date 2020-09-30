@@ -1,4 +1,4 @@
-package main
+package mockgen
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/aphistic/sweet"
 	"github.com/dave/jennifer/jen"
-	"github.com/efritz/go-genlib/types"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 	. "github.com/onsi/gomega"
 )
 

@@ -1,16 +1,15 @@
-package main
+package mockgen
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"unicode"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/derision-test/go-mockgen/internal/genlib/command"
+	"github.com/derision-test/go-mockgen/internal/genlib/generation"
+	"github.com/derision-test/go-mockgen/internal/genlib/types"
 	"github.com/dustin/go-humanize"
-	"github.com/efritz/go-genlib/command"
-	"github.com/efritz/go-genlib/generation"
-	"github.com/efritz/go-genlib/types"
 )
 
 type (
@@ -55,18 +54,7 @@ const (
 	resultVarFormat   = "r%d"
 )
 
-func init() {
-	log.SetFlags(0)
-	log.SetPrefix("go-mockgen: ")
-}
-
-func main() {
-	if err := command.Run(name, description, version, types.GetInterface, generate); err != nil {
-		log.Fatalf("error: %s\n", err.Error())
-	}
-}
-
-func generate(ifaces []*types.Interface, opts *command.Options) error {
+func Generate(ifaces []*types.Interface, opts *command.Options) error {
 	g := &generator{
 		outputImportPath: opts.OutputImportPath,
 	}

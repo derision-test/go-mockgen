@@ -7,8 +7,8 @@ import (
 	. "github.com/derision-test/go-mockgen/matchers"
 	. "github.com/onsi/gomega"
 
-	e2etests "github.com/derision-test/go-mockgen/internal/e2e-tests"
-	"github.com/derision-test/go-mockgen/internal/e2e-tests/mocks"
+	e2etests "github.com/derision-test/go-mockgen/internal/testdata"
+	"github.com/derision-test/go-mockgen/internal/testdata/mocks"
 )
 
 type E2ESuite struct{}

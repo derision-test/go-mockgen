@@ -1,8 +1,8 @@
 #!/bin/bash
 
 binname="go-mockgen"
-srcpath="./internal/e2e-tests"
-genpath="./internal/e2e-tests/mocks"
+srcpath="./internal/testdata"
+genpath="./internal/testdata/mocks"
 
 if [ ! -f "./${binname}" ]; then
     function finish {
