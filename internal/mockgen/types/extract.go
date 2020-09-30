@@ -42,7 +42,9 @@ func Extract(importPaths []string, targetNames []string) ([]*Interface, error) {
 			return nil, err
 		}
 
-		ifaces = append(ifaces, iface)
+		if iface != nil {
+			ifaces = append(ifaces, iface)
+		}
 	}
 
 	return ifaces, nil
