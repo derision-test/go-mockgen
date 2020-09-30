@@ -26,12 +26,10 @@ func GenerateComment(level int, format string, args ...interface{}) *jen.Stateme
 		allowance = minAllowance
 	}
 
-	var (
-		commentText  = fmt.Sprintf(format, args...)
-		wrapped      = wordwrap.WrapString(commentText, uint(allowance))
-		lines        = strings.Split(wrapped, "\n")
-		commentBlock = jen.Comment(lines[0]).Line()
-	)
+	commentText := fmt.Sprintf(format, args...)
+	wrapped := wordwrap.WrapString(commentText, uint(allowance))
+	lines := strings.Split(wrapped, "\n")
+	commentBlock := jen.Comment(lines[0]).Line()
 
 	for i := 1; i < len(lines); i++ {
 		commentBlock = commentBlock.Comment(lines[i]).Line()

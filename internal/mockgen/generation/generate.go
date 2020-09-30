@@ -10,54 +10,21 @@ import (
 	"strings"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/derision-test/go-mockgen/internal/mockgen/command"
+	"github.com/derision-test/go-mockgen/internal/mockgen/consts"
 	"github.com/derision-test/go-mockgen/internal/mockgen/paths"
 	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 )
 
-type (
-	FilenameGenerator  func(name string) string
-	InterfaceGenerator func(file *jen.File, iface *types.Interface, prefix string)
-)
-
-func Generate(
-	appName string,
-	appVersion string,
-	ifaces []*types.Interface,
-	opts *command.Options,
-	filenameGenerator FilenameGenerator,
-	interfaceGenerator InterfaceGenerator,
-) error {
+func Generate(ifaces []*types.Interface, opts *Options) error {
 	if opts.OutputFilename == "" && opts.OutputDir != "" {
-		return generateDirectory(
-			appName,
-			appVersion,
-			ifaces,
-			opts,
-			filenameGenerator,
-			interfaceGenerator,
-		)
+		return generateDirectory(ifaces, opts)
 	}
 
-	return generateFile(appName, appVersion, ifaces, opts, interfaceGenerator)
+	return generateFile(ifaces, opts)
 }
 
-func generateFile(
-	appName string,
-	appVersion string,
-	ifaces []*types.Interface,
-	opts *command.Options,
-	interfaceGenerator InterfaceGenerator,
-) error {
-	content, err := generateContent(
-		appName,
-		appVersion,
-		ifaces,
-		opts.PkgName,
-		opts.Prefix,
-		interfaceGenerator,
-	)
-
+func generateFile(ifaces []*types.Interface, opts *Options) error {
+	content, err := generateContent(ifaces, opts.PkgName, opts.Prefix, opts.OutputImportPath)
 	if err != nil {
 		return err
 	}
@@ -67,77 +34,55 @@ func generateFile(
 		if err != nil {
 			return err
 		}
-
 		if exists && !opts.Force {
-			return fmt.Errorf(
-				"filename %s already exists, overwrite with --force",
-				paths.GetRelativePath(opts.OutputFilename),
-			)
+			return fmt.Errorf("filename %s already exists, overwrite with --force", paths.GetRelativePath(opts.OutputFilename))
 		}
 
-		return writeFile(opts.OutputFilename, content)
+		log.Printf("writing to '%s'\n", paths.GetRelativePath(opts.OutputFilename))
+		return ioutil.WriteFile(opts.OutputFilename, []byte(content), 0644)
 	}
 
 	fmt.Printf("%s\n", content)
 	return nil
 }
 
-func generateDirectory(
-	appName string,
-	appVersion string,
-	ifaces []*types.Interface,
-	opts *command.Options,
-	filenameGenerator FilenameGenerator,
-	interfaceGenerator InterfaceGenerator,
-) error {
+func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 	dirname := filepath.Join(opts.OutputDir, opts.OutputFilename)
+
+	var prefix string
+	if opts.Prefix != "" {
+		prefix = opts.Prefix + "_"
+	}
+
+	makeFilename := func(interfaceName string) string {
+		filename := fmt.Sprintf("%s%s_mock.go", prefix, interfaceName)
+		return path.Join(dirname, strings.Replace(strings.ToLower(filename), "-", "_", -1))
+	}
 
 	if !opts.Force {
 		allPaths := []string{}
 		for _, iface := range ifaces {
-			allPaths = append(allPaths, getFilename(
-				dirname,
-				iface.Name,
-				opts.Prefix,
-				filenameGenerator,
-			))
+			allPaths = append(allPaths, makeFilename(iface.Name))
 		}
 
 		conflict, err := paths.AnyExists(allPaths)
 		if err != nil {
 			return err
 		}
-
 		if conflict != "" {
-			return fmt.Errorf(
-				"filename %s already exists, overwrite with --force",
-				paths.GetRelativePath(conflict),
-			)
+			return fmt.Errorf("filename %s already exists, overwrite with --force", paths.GetRelativePath(conflict))
 		}
 	}
 
 	for _, iface := range ifaces {
-		content, err := generateContent(
-			appName,
-			appVersion,
-			[]*types.Interface{iface},
-			opts.PkgName,
-			opts.Prefix,
-			interfaceGenerator,
-		)
-
+		content, err := generateContent([]*types.Interface{iface}, opts.PkgName, opts.Prefix, opts.OutputImportPath)
 		if err != nil {
 			return err
 		}
 
-		filename := getFilename(
-			dirname,
-			iface.Name,
-			opts.Prefix,
-			filenameGenerator,
-		)
-
-		if err := writeFile(filename, content); err != nil {
+		filename := makeFilename(iface.Name)
+		log.Printf("writing to '%s'\n", paths.GetRelativePath(filename))
+		if err := ioutil.WriteFile(filename, []byte(content), 0644); err != nil {
 			return err
 		}
 	}
@@ -145,32 +90,13 @@ func generateDirectory(
 	return nil
 }
 
-func getFilename(dirname, interfaceName, prefix string, filenameGenerator FilenameGenerator) string {
-	filename := filenameGenerator(interfaceName)
-	if prefix != "" {
-		filename = fmt.Sprintf("%s_%s", prefix, filename)
-	}
-
-	return path.Join(dirname, strings.Replace(strings.ToLower(filename), "-", "_", -1))
-}
-
-func generateContent(
-	appName string,
-	appVersion string,
-	ifaces []*types.Interface,
-	pkgName string,
-	prefix string,
-	interfaceGenerator InterfaceGenerator,
-) (string, error) {
-	file := newFile(appName, appVersion, pkgName)
+func generateContent(ifaces []*types.Interface, pkgName, prefix, outputImportPath string) (string, error) {
+	file := jen.NewFile(pkgName)
+	file.HeaderComment(fmt.Sprintf("Code generated by %s %s; DO NOT EDIT.", consts.Name, consts.Version))
 
 	for _, iface := range ifaces {
-		log.Printf(
-			"generating code for interface '%s'\n",
-			iface.Name,
-		)
-
-		interfaceGenerator(file, iface, prefix)
+		log.Printf("generating code for interface '%s'\n", iface.Name)
+		generateInterface(file, iface, prefix, outputImportPath)
 	}
 
 	buffer := &bytes.Buffer{}
@@ -179,19 +105,4 @@ func generateContent(
 	}
 
 	return buffer.String(), nil
-}
-
-func newFile(appName, appVersion, pkgName string) *jen.File {
-	file := jen.NewFile(pkgName)
-	file.HeaderComment(fmt.Sprintf("Code generated by %s %s; DO NOT EDIT.", appName, appVersion))
-	return file
-}
-
-func writeFile(filename, content string) error {
-	log.Printf(
-		"writing to '%s'\n",
-		paths.GetRelativePath(filename),
-	)
-
-	return ioutil.WriteFile(filename, []byte(content), 0644)
 }

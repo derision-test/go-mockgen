@@ -1,4 +1,4 @@
-package mockgen
+package generation
 
 import (
 	"fmt"
@@ -76,8 +76,8 @@ func TestGenerateInterface(t *testing.T) {
 	}
 
 	file := jen.NewFile("test")
-	g := &generator{""}
-	g.generateInterface(file, makeBareInterface(TestMethodDo, TestMethodDof), TestPrefix)
+
+	generateInterface(file, makeBareInterface(TestMethodDo, TestMethodDof), TestPrefix, "")
 	rendered := fmt.Sprintf("%#v\n", file)
 
 	for _, decl := range expectedDecls {
@@ -86,9 +86,7 @@ func TestGenerateInterface(t *testing.T) {
 }
 
 func TestGenerateMockStruct(t *testing.T) {
-	g := &generator{""}
-	code := g.generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
-
+	code := generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 	expected := strip(`
 		// MockTestClient is a mock implementation of the Client interface (from the
 		// package github.com/derision-test/go-mockgen/test) used for unit testing.
@@ -108,9 +106,7 @@ func TestGenerateMockStruct(t *testing.T) {
 }
 
 func TestGenerateMockStructConstructor(t *testing.T) {
-	g := &generator{""}
-	code := g.generateMockStructConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
-
+	code := generateMockStructConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 	expected := strip(`
 		// NewMockTestClient creates a new mock of the Client interface. All methods
 		// return zero values for all results, unless overwritten.
@@ -138,9 +134,7 @@ func TestGenerateMockStructConstructor(t *testing.T) {
 }
 
 func TestGenerateMockStructFromConstructor(t *testing.T) {
-	g := &generator{""}
-	code := g.generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
-
+	code := generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 	expected := strip(`
 		// NewMockTestClientFrom creates a new mock of the MockTestClient interface.
 		// All methods delegate to the given implementation, unless overwritten.
@@ -164,9 +158,7 @@ func TestGenerateMockStructFromConstructor(t *testing.T) {
 func TestGenerateMockStructFromConstructorUnexported(t *testing.T) {
 	iface := makeBareInterface(TestMethodStatus, TestMethodDo, TestMethodDof)
 	iface.Name = "client"
-
-	g := &generator{""}
-	code := g.generateMockStructFromConstructor(g.wrapInterface(iface, TestPrefix, TestTitleName, TestMockStructName))
+	code := generateMockStructFromConstructor(wrapInterface(iface, TestPrefix, TestTitleName, TestMockStructName, ""), "")
 
 	expected := strip(`
 		// surrogateMockClient is a copy of the client interface (from the package
@@ -198,9 +190,7 @@ func TestGenerateMockStructFromConstructorUnexported(t *testing.T) {
 }
 
 func TestGenerateFuncStruct(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncStruct(makeMethod(TestMethodDo))
-
+	code := generateFuncStruct(makeMethod(TestMethodDo))
 	expected := strip(`
 		// TestClientDoFunc describes the behavior when the Do method of the parent
 		// MockTestClient instance is invoked.
@@ -215,9 +205,7 @@ func TestGenerateFuncStruct(t *testing.T) {
 }
 
 func TestGenerateFuncStructVariadic(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncStruct(makeMethod(TestMethodDof))
-
+	code := generateFuncStruct(makeMethod(TestMethodDof))
 	expected := strip(`
 		// TestClientDofFunc describes the behavior when the Dof method of the
 		// parent MockTestClient instance is invoked.
@@ -232,9 +220,7 @@ func TestGenerateFuncStructVariadic(t *testing.T) {
 }
 
 func TestGenerateFunc(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFunc(makeMethod(TestMethodDo))
-
+	code := generateFunc(makeMethod(TestMethodDo))
 	expected := strip(`
 		// Do delegates to the next hook function in the queue and stores the
 		// parameter and result values of this invocation.
@@ -248,9 +234,7 @@ func TestGenerateFunc(t *testing.T) {
 }
 
 func TestGenerateFuncVariadic(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFunc(makeMethod(TestMethodDof))
-
+	code := generateFunc(makeMethod(TestMethodDof))
 	expected := strip(`
 		// Dof delegates to the next hook function in the queue and stores the
 		// parameter and result values of this invocation.
@@ -264,9 +248,7 @@ func TestGenerateFuncVariadic(t *testing.T) {
 }
 
 func TestGenerateFuncSetHookMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncSetHookMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncSetHookMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// SetDefaultHook sets function that is called when the Do method of the
 		// parent MockTestClient instance is invoked and the hook queue is empty.
@@ -278,9 +260,7 @@ func TestGenerateFuncSetHookMethod(t *testing.T) {
 }
 
 func TestGenerateFuncSetHookMethodVariadic(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncSetHookMethod(makeMethod(TestMethodDof))
-
+	code := generateFuncSetHookMethod(makeMethod(TestMethodDof))
 	expected := strip(`
 		// SetDefaultHook sets function that is called when the Dof method of the
 		// parent MockTestClient instance is invoked and the hook queue is empty.
@@ -292,9 +272,7 @@ func TestGenerateFuncSetHookMethodVariadic(t *testing.T) {
 }
 
 func TestGenerateFuncPushHookMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncPushHookMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncPushHookMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// PushHook adds a function to the end of hook queue. Each invocation of the
 		// Do method of the parent MockTestClient instance invokes the hook at the
@@ -310,9 +288,7 @@ func TestGenerateFuncPushHookMethod(t *testing.T) {
 }
 
 func TestGenerateFuncPushHookMethodVariadic(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncPushHookMethod(makeMethod(TestMethodDof))
-
+	code := generateFuncPushHookMethod(makeMethod(TestMethodDof))
 	expected := strip(`
 		// PushHook adds a function to the end of hook queue. Each invocation of the
 		// Dof method of the parent MockTestClient instance invokes the hook at the
@@ -328,9 +304,7 @@ func TestGenerateFuncPushHookMethodVariadic(t *testing.T) {
 }
 
 func TestGenerateFuncSetReturnMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncSetReturnMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncSetReturnMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// SetDefaultReturn calls SetDefaultDefaultHook with a function that returns
 		// the given values.
@@ -344,9 +318,7 @@ func TestGenerateFuncSetReturnMethod(t *testing.T) {
 }
 
 func TestGenerateFuncPushReturnMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncPushReturnMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncPushReturnMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// PushReturn calls PushDefaultHook with a function that returns the given
 		// values.
@@ -360,9 +332,7 @@ func TestGenerateFuncPushReturnMethod(t *testing.T) {
 }
 
 func TestGenerateFuncNextHookMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncNextHookMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncNextHookMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		func (f *TestClientDoFunc) nextHook() func(string) bool {
 			f.mutex.Lock()
@@ -381,9 +351,7 @@ func TestGenerateFuncNextHookMethod(t *testing.T) {
 }
 
 func TestGenerateFuncAppendCallMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncAppendCallMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncAppendCallMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		func (f *TestClientDoFunc) appendCall(r0 TestClientDoFuncCall) {
 			f.mutex.Lock()
@@ -395,9 +363,7 @@ func TestGenerateFuncAppendCallMethod(t *testing.T) {
 }
 
 func TestGenerateFuncHistoryMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateFuncHistoryMethod(makeMethod(TestMethodDo))
-
+	code := generateFuncHistoryMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// History returns a sequence of TestClientDoFuncCall objects describing the
 		// invocations of this function.
@@ -414,9 +380,7 @@ func TestGenerateFuncHistoryMethod(t *testing.T) {
 }
 
 func TestGenerateCallStruct(t *testing.T) {
-	g := &generator{""}
-	code := g.generateCallStruct(makeMethod(TestMethodDo))
-
+	code := generateCallStruct(makeMethod(TestMethodDo))
 	expected := strip(`
 		// TestClientDoFuncCall is an object that describes an invocation of method
 		// Do on an instance of MockTestClient.
@@ -433,9 +397,7 @@ func TestGenerateCallStruct(t *testing.T) {
 }
 
 func TestGenerateCallStructVariadic(t *testing.T) {
-	g := &generator{""}
-	code := g.generateCallStruct(makeMethod(TestMethodDof))
-
+	code := generateCallStruct(makeMethod(TestMethodDof))
 	expected := strip(`
 		// TestClientDofFuncCall is an object that describes an invocation of method
 		// Dof on an instance of MockTestClient.
@@ -456,9 +418,7 @@ func TestGenerateCallStructVariadic(t *testing.T) {
 }
 
 func TestGenerateCallArgMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateCallArgsMethod(makeMethod(TestMethodDo))
-
+	code := generateCallArgsMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// Args returns an interface slice containing the arguments of this
 		// invocation.
@@ -470,9 +430,7 @@ func TestGenerateCallArgMethod(t *testing.T) {
 }
 
 func TestGenerateCallArgsMethodVariadic(t *testing.T) {
-	g := &generator{""}
-	code := g.generateCallArgsMethod(makeMethod(TestMethodDof))
-
+	code := generateCallArgsMethod(makeMethod(TestMethodDof))
 	expected := strip(`
 		// Args returns an interface slice containing the arguments of this
 		// invocation. The variadic slice argument is flattened in this array such
@@ -491,9 +449,7 @@ func TestGenerateCallArgsMethodVariadic(t *testing.T) {
 }
 
 func TestGenerateCallResultsMethod(t *testing.T) {
-	g := &generator{""}
-	code := g.generateCallResultsMethod(makeMethod(TestMethodDo))
-
+	code := generateCallResultsMethod(makeMethod(TestMethodDo))
 	expected := strip(`
 		// Results returns an interface slice containing the results of this
 		// invocation.
@@ -505,9 +461,7 @@ func TestGenerateCallResultsMethod(t *testing.T) {
 }
 
 func TestGenerateCallResultsMethodMultiple(t *testing.T) {
-	g := &generator{""}
-	code := g.generateCallResultsMethod(makeMethod(TestMethodStatus))
-
+	code := generateCallResultsMethod(makeMethod(TestMethodStatus))
 	expected := strip(`
 		// Results returns an interface slice containing the results of this
 		// invocation.
@@ -540,14 +494,13 @@ func makeBareInterface(methods ...*types.Method) *types.Interface {
 	}
 }
 
-func makeInterface(methods ...*types.Method) *wrappedInterface {
-	g := &generator{""}
-	return g.wrapInterface(makeBareInterface(methods...), TestPrefix, TestTitleName, TestMockStructName)
+func makeInterface(methods ...*types.Method) (*wrappedInterface, string) {
+	return wrapInterface(makeBareInterface(methods...), TestPrefix, TestTitleName, TestMockStructName, ""), ""
 }
 
-func makeMethod(methods ...*types.Method) (*wrappedInterface, *wrappedMethod) {
-	wrapped := makeInterface(methods...)
-	return wrapped, wrapped.wrappedMethods[0]
+func makeMethod(methods ...*types.Method) (*wrappedInterface, *wrappedMethod, string) {
+	wrapped, _ := makeInterface(methods...)
+	return wrapped, wrapped.wrappedMethods[0], ""
 }
 
 func strip(block string) string {
