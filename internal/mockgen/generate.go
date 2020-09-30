@@ -2,6 +2,7 @@ package mockgen
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"unicode"
 
@@ -39,11 +40,6 @@ type (
 )
 
 const (
-	name        = "go-mockgen"
-	packageName = "github.com/derision-test/go-mockgen"
-	description = "go-mockgen generates mock implementations from interface definitions."
-	version     = "0.1.0"
-
 	mockStructFormat  = "Mock%s%s"
 	funcStructFormat  = "%s%s%sFunc"
 	callStructFormat  = "%s%s%sFuncCall"
@@ -54,7 +50,18 @@ const (
 	resultVarFormat   = "r%d"
 )
 
-func Generate(ifaces []*types.Interface, opts *command.Options) error {
+func init() {
+	log.SetFlags(0)
+	log.SetPrefix("go-mockgen: ")
+}
+
+func Generate() {
+	if err := command.Run(name, description, version, types.GetInterface, generate); err != nil {
+		log.Fatalf("error: %s\n", err.Error())
+	}
+}
+
+func generate(ifaces []*types.Interface, opts *command.Options) error {
 	g := &generator{
 		outputImportPath: opts.OutputImportPath,
 	}

@@ -1,7 +1,7 @@
 package main
 
-import mainpkg "github.com/derision-test/go-mockgen/internal/main"
+import "github.com/derision-test/go-mockgen/internal/mockgen"
 
 func main() {
-	mainpkg.Main()
+	mockgen.Generate()
 }
