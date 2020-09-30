@@ -1,11 +1,11 @@
-package main
+package integration
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/derision-test/go-mockgen/internal/testdata"
-	"github.com/derision-test/go-mockgen/internal/testdata/mocks"
+	"github.com/derision-test/go-mockgen/internal/integration/testdata"
+	"github.com/derision-test/go-mockgen/internal/integration/testdata/mocks"
 	. "github.com/derision-test/go-mockgen/testutil/gomega"
 	. "github.com/onsi/gomega"
 )
