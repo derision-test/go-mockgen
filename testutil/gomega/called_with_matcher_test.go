@@ -1,85 +1,81 @@
 package matchers
 
 import (
-	"github.com/aphistic/sweet"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 )
 
-type CalledWithMatcherSuite struct{}
-
-func (s *CalledWithMatcherSuite) TestMatch(t sweet.T) {
-	ok, err := BeCalledWith(ContainSubstring("foo"), 1, Not(Equal(2)), 3).Match(litFunc{[]litCall{
+func TestCalledWithMatch(t *testing.T) {
+	ok, err := BeCalledWith(gomega.ContainSubstring("foo"), 1, gomega.Not(gomega.Equal(2)), 3).Match(litFunc{[]litCall{
 		{[]interface{}{"foobar", 1, 2, 3}, nil},
 		{[]interface{}{"foobar", 1, 4, 3}, nil},
 		{[]interface{}{"barbaz", 1, 2, 3}, nil},
 	}})
 
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeTrue())
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
 
-func (s *CalledWithMatcherSuite) TestNoMatch(t sweet.T) {
-	ok, err := BeCalledWith(ContainSubstring("foo"), 1, Not(Equal(2)), 3).Match(litFunc{[]litCall{
+func TestCalledWithNoMatch(t *testing.T) {
+	ok, err := BeCalledWith(gomega.ContainSubstring("foo"), 1, gomega.Not(gomega.Equal(2)), 3).Match(litFunc{[]litCall{
 		{[]interface{}{"foobar", 1, 2, 3}, nil},
 		{[]interface{}{"barbaz", 1, 4, 3}, nil},
 		{[]interface{}{"foobaz", 1, 2, 3}, nil},
 	}})
 
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledWithMatcherSuite) TestMatchError(t sweet.T) {
+func TestCalledWithMatchError(t *testing.T) {
 	_, err := BeCalledWith("foo", 1, 2, 3).Match(nil)
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(HavePrefix("BeCalledWith expects a mock function"))
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "BeCalledWith expects a mock function")
 }
 
-type CalledOnceWithMatcherSuite struct{}
-
-func (s *CalledOnceWithMatcherSuite) TestMatch(t sweet.T) {
-	ok, err := BeCalledOnceWith(ContainSubstring("foo"), 1, Not(Equal(2)), 3).Match(litFunc{[]litCall{
+func TestCalledOnceWithMatch(t *testing.T) {
+	ok, err := BeCalledOnceWith(gomega.ContainSubstring("foo"), 1, gomega.Not(gomega.Equal(2)), 3).Match(litFunc{[]litCall{
 		{[]interface{}{"foobar", 1, 2, 3}, nil},
 		{[]interface{}{"foobar", 1, 4, 3}, nil},
 		{[]interface{}{"barbaz", 1, 2, 3}, nil},
 	}})
 
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeTrue())
+	assert.Nil(t, err)
+	assert.True(t, ok)
 }
 
-func (s *CalledOnceWithMatcherSuite) TestNoMatch(t sweet.T) {
-	ok, err := BeCalledOnceWith(ContainSubstring("foo"), 1, Not(Equal(2)), 3).Match(litFunc{[]litCall{
+func TestCalledOnceWithNoMatch(t *testing.T) {
+	ok, err := BeCalledOnceWith(gomega.ContainSubstring("foo"), 1, gomega.Not(gomega.Equal(2)), 3).Match(litFunc{[]litCall{
 		{[]interface{}{"foobar", 1, 2, 3}, nil},
 		{[]interface{}{"barbaz", 1, 4, 3}, nil},
 		{[]interface{}{"foobaz", 1, 2, 3}, nil},
 	}})
 
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledOnceWithMatcherSuite) TestMultipleMatches(t sweet.T) {
-	ok, err := BeCalledOnceWith(ContainSubstring("foo"), 1, Not(Equal(2)), 3).Match(litFunc{[]litCall{
+func TestCalledOnceWithMultipleMatches(t *testing.T) {
+	ok, err := BeCalledOnceWith(gomega.ContainSubstring("foo"), 1, gomega.Not(gomega.Equal(2)), 3).Match(litFunc{[]litCall{
 		{[]interface{}{"foobar", 1, 2, 3}, nil},
 		{[]interface{}{"foobar", 1, 4, 3}, nil},
 		{[]interface{}{"foobar", 1, 4, 3}, nil},
 		{[]interface{}{"foobaz", 1, 2, 3}, nil},
 	}})
 
-	Expect(err).To(BeNil())
-	Expect(ok).To(BeFalse())
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }
 
-func (s *CalledOnceWithMatcherSuite) TestMatchError(t sweet.T) {
+func TestCalledOnceWithMatchError(t *testing.T) {
 	_, err := BeCalledOnceWith("foo", 1, 2, 3).Match(nil)
-	Expect(err).ToNot(BeNil())
-	Expect(err.Error()).To(HavePrefix("BeCalledOnceWith expects a mock function"))
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "BeCalledOnceWith expects a mock function")
 }
 
-type CallsSuite struct{}
-
-func (s *CallsSuite) TestGetMatchingCallCountsLiterals(t sweet.T) {
+func TestGetMatchingCallCountsLiterals(t *testing.T) {
 	m := litFunc{[]litCall{
 		{args: []interface{}{"foo", "bar"}},
 		{args: []interface{}{"foo", "bar", "baz"}},
@@ -89,11 +85,11 @@ func (s *CallsSuite) TestGetMatchingCallCountsLiterals(t sweet.T) {
 	}}
 
 	matchingHistory, ok := getCallHistoryWith(m, "foo", "bar", "baz")
-	Expect(ok).To(BeTrue())
-	Expect(matchingHistory).To(HaveLen(3))
+	assert.True(t, ok)
+	assert.Len(t, matchingHistory, 3)
 }
 
-func (s *CallsSuite) TestGetMatchingCallCountsMatchers(t sweet.T) {
+func TestGetMatchingCallCountsMatchers(t *testing.T) {
 	m := litFunc{[]litCall{
 		{args: []interface{}{"foo", "bar"}},
 		{args: []interface{}{"foo", "bar", "baz"}},
@@ -102,12 +98,12 @@ func (s *CallsSuite) TestGetMatchingCallCountsMatchers(t sweet.T) {
 		{args: []interface{}{"foo", "bar", "baz"}},
 	}}
 
-	matchingHistory, ok := getCallHistoryWith(m, HaveLen(3), HaveLen(3), HaveLen(3))
-	Expect(ok).To(BeTrue())
-	Expect(matchingHistory).To(HaveLen(3))
+	matchingHistory, ok := getCallHistoryWith(m, gomega.HaveLen(3), gomega.HaveLen(3), gomega.HaveLen(3))
+	assert.True(t, ok)
+	assert.Len(t, matchingHistory, 3)
 }
 
-func (s *CallsSuite) TestGetMatchingCallCountsMixed(t sweet.T) {
+func TestGetMatchingCallCountsMixed(t *testing.T) {
 	m := litFunc{[]litCall{
 		{args: []interface{}{"foo", "bar"}},
 		{args: []interface{}{"foo", "bar", "baz"}},
@@ -116,7 +112,7 @@ func (s *CallsSuite) TestGetMatchingCallCountsMixed(t sweet.T) {
 		{args: []interface{}{"foo", "bar", "baz"}},
 	}}
 
-	matchingHistory, ok := getCallHistoryWith(m, "foo", "bar", ContainSubstring("bo"))
-	Expect(ok).To(BeTrue())
-	Expect(matchingHistory).To(HaveLen(1))
+	matchingHistory, ok := getCallHistoryWith(m, "foo", "bar", gomega.ContainSubstring("bo"))
+	assert.True(t, ok)
+	assert.Len(t, matchingHistory, 1)
 }
