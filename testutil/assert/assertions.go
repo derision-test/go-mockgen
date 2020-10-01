@@ -7,8 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type CallInstanceAssertionFunc func(assert.TestingT, interface{}) bool
-
 // Called asserts that the mock function object was called at least once.
 func Called(t assert.TestingT, mockFn interface{}, msgAndArgs ...interface{}) bool {
 	callCount, ok := callCount(t, mockFn, msgAndArgs...)
@@ -54,9 +52,9 @@ func CalledN(t assert.TestingT, mockFn interface{}, n int, msgAndArgs ...interfa
 }
 
 // CalledWith asserts that the mock function object was called at least once with a set of
-// arguments matching the given assertion function.
-func CalledWith(t assert.TestingT, mockFn interface{}, assertion CallInstanceAssertionFunc, msgAndArgs ...interface{}) bool {
-	matchingCallCount, ok := callCountWith(t, mockFn, assertion, msgAndArgs...)
+// arguments matching the given call instance asserter.
+func CalledWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) bool {
+	matchingCallCount, ok := callCountWith(t, mockFn, asserter, msgAndArgs...)
 	if !ok {
 		return false
 	}
@@ -67,9 +65,9 @@ func CalledWith(t assert.TestingT, mockFn interface{}, assertion CallInstanceAss
 }
 
 // CalledWith asserts that the mock function object was not called with a set of arguments
-// matching the given assertion function.
-func NotCalledWith(t assert.TestingT, mockFn interface{}, assertion CallInstanceAssertionFunc, msgAndArgs ...interface{}) bool {
-	matchingCallCount, ok := callCountWith(t, mockFn, assertion, msgAndArgs...)
+// matching the given call instance asserter.
+func NotCalledWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) bool {
+	matchingCallCount, ok := callCountWith(t, mockFn, asserter, msgAndArgs...)
 	if !ok {
 		return false
 	}
@@ -80,15 +78,15 @@ func NotCalledWith(t assert.TestingT, mockFn interface{}, assertion CallInstance
 }
 
 // CalledOnceWith asserts that the mock function object was called exactly once with a set of
-// arguments matching the given assertion function.
-func CalledOnceWith(t assert.TestingT, mockFn interface{}, assertion CallInstanceAssertionFunc, msgAndArgs ...interface{}) bool {
-	return CalledNWith(t, mockFn, 1, assertion, msgAndArgs...)
+// arguments matching the given call instance asserter.
+func CalledOnceWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) bool {
+	return CalledNWith(t, mockFn, 1, asserter, msgAndArgs...)
 }
 
 // CalledNWith asserts that the mock function object was called exactly n times with a set of
-// arguments matching the given assertion function.
-func CalledNWith(t assert.TestingT, mockFn interface{}, n int, assertion CallInstanceAssertionFunc, msgAndArgs ...interface{}) bool {
-	matchingCallCount, ok := callCountWith(t, mockFn, assertion, msgAndArgs...)
+// arguments matching the given call instance asserter.
+func CalledNWith(t assert.TestingT, mockFn interface{}, n int, asserter CallInstanceAsserter, msgAndArgs ...interface{}) bool {
+	matchingCallCount, ok := callCountWith(t, mockFn, asserter, msgAndArgs...)
 	if !ok {
 		return false
 	}
@@ -100,16 +98,16 @@ func CalledNWith(t assert.TestingT, mockFn interface{}, n int, assertion CallIns
 
 // callCount returns the number of times the given mock function was called.
 func callCount(t assert.TestingT, mockFn interface{}, msgAndArgs ...interface{}) (int, bool) {
-	return callCountWith(t, mockFn, func(t assert.TestingT, call interface{}) bool { return true }, msgAndArgs...)
+	return callCountWith(t, mockFn, CallInstanceAsserterFunc(func(call interface{}) bool { return true }), msgAndArgs...)
 }
 
 // callCount returns the number of times the given mock function was called with a set of
-// arguments matching the given assertion function.
-func callCountWith(t assert.TestingT, mockFn interface{}, assertion CallInstanceAssertionFunc, msgAndArgs ...interface{}) (int, bool) {
+// arguments matching the given call instance asserter.
+func callCountWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) (int, bool) {
 	matchingHistory, ok := testutil.GetCallHistoryWith(mockFn, func(call testutil.CallInstance) bool {
 		// Pass in a dummy non-erroring TestingT so that any assertions done inside
-		// this function will not fail the enclosing test.
-		return assertion(mockTestingT{}, call)
+		// of the asserter will not fail the enclosing test.
+		return asserter.Assert(call)
 	})
 	if !ok {
 		return 0, assert.Fail(t, fmt.Sprintf("Parameters must be a mock function description, got %T", mockFn), msgAndArgs...)
@@ -117,7 +115,3 @@ func callCountWith(t assert.TestingT, mockFn interface{}, assertion CallInstance
 
 	return len(matchingHistory), true
 }
-
-type mockTestingT struct{}
-
-func (mockTestingT) Errorf(format string, args ...interface{}) {}

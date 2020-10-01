@@ -1,11 +1,9 @@
-package require
+package mockrequire
 
 import (
 	mockassert "github.com/derision-test/go-mockgen/testutil/assert"
 	"github.com/stretchr/testify/require"
 )
-
-type CallInstanceAssertionFunc = mockassert.CallInstanceAssertionFunc
 
 // Called asserts that the mock function object was called at least once.
 func Called(t require.TestingT, mockFn interface{}, msgAndArgs ...interface{}) {
@@ -37,32 +35,32 @@ func CalledN(t require.TestingT, mockFn interface{}, n int, msgAndArgs ...interf
 
 // CalledWith asserts that the mock function object was called at least once with a set of
 // arguments matching the given mockassertion function.
-func CalledWith(t require.TestingT, mockFn interface{}, assert CallInstanceAssertionFunc, msgAndArgs ...interface{}) {
-	if !mockassert.CalledWith(t, mockFn, assert, msgAndArgs...) {
+func CalledWith(t require.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
+	if !mockassert.CalledWith(t, mockFn, asserter, msgAndArgs...) {
 		t.FailNow()
 	}
 }
 
 // CalledWith asserts that the mock function object was not called with a set of arguments
 // matching the given mockassertion function.
-func NotCalledWith(t require.TestingT, mockFn interface{}, assert CallInstanceAssertionFunc, msgAndArgs ...interface{}) {
-	if !mockassert.NotCalledWith(t, mockFn, assert, msgAndArgs...) {
+func NotCalledWith(t require.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
+	if !mockassert.NotCalledWith(t, mockFn, asserter, msgAndArgs...) {
 		t.FailNow()
 	}
 }
 
 // CalledOnceWith asserts that the mock function object was called exactly once with a set of
 // arguments matching the given mockassertion function.
-func CalledOnceWith(t require.TestingT, mockFn interface{}, assert CallInstanceAssertionFunc, msgAndArgs ...interface{}) {
-	if !mockassert.CalledOnceWith(t, mockFn, assert, msgAndArgs...) {
+func CalledOnceWith(t require.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
+	if !mockassert.CalledOnceWith(t, mockFn, asserter, msgAndArgs...) {
 		t.FailNow()
 	}
 }
 
 // CalledNWith asserts that the mock function object was called exactly n times with a set of
 // arguments matching the given mockassertion function.
-func CalledNWith(t require.TestingT, mockFn interface{}, n int, assert CallInstanceAssertionFunc, msgAndArgs ...interface{}) {
-	if !mockassert.CalledNWith(t, mockFn, n, assert, msgAndArgs...) {
+func CalledNWith(t require.TestingT, mockFn interface{}, n int, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
+	if !mockassert.CalledNWith(t, mockFn, n, asserter, msgAndArgs...) {
 		t.FailNow()
 	}
 }

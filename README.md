@@ -99,6 +99,45 @@ allCalls[0].Result0 // value
 allCalls[0].Result1 // exists flag
 ```
 
+### Testify integration
+
+This library also contains an API that integrates with the style of [Testify](https://github.com/stretchr/testify) assertions.
+
+To use the assertions, import the assert and require packages by name.
+
+```go
+import (
+    mockassert "github.com/derision-test/go-mockgen/testutil/assert"
+    mockrequire "github.com/derision-test/go-mockgen/testutil/require"
+)
+```
+
+The following methods are defined in both packages.
+
+- `Called(t, mockFn, msgAndArgs...)`
+- `NotCalled(t, mockFn, msgAndArgs...)`
+- `CalledOnce(t, mockFn, msgAndArgs...)`
+- `CalledN(t, mockFn, n, msgAndArgs...)`
+- `CalledWith(t, mockFn, msgAndArgs...)`
+- `NotCalledWith(t, mockFn, msgAndArgs...)`
+- `CalledOnceWith(t, mockFn, msgAndArgs...)`
+- `CalledNWith(t, mockFn, n, msgAndArgs...)`
+
+THese methods can be used as follows.
+
+```go
+// cache.Get called 3 times
+mockassert.CalledN(t, cache.GetFunc, 3)
+
+// Ensure cache.Set("foo", "bar") was called
+mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", "bar"))
+
+// Ensure cache.Set("foo", _) was called
+mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", mockassert.Skip))
+```
+
+#### Gomega integration
+
 This library also contains a set of [Gomega](https://onsi.github.io/gomega/) matchers which simplify assertions over a mocked method's call history.
 
 To use the matchers, import the matchers package anonymously.
@@ -113,6 +152,7 @@ The following matchers are defined.
 - `BeCalledN(n)`
 - `BeCalledOnce()`
 - `BeCalledWith(args...)`
+- `BeCalledNWith(args...)`
 - `BeCalledOnceWith(args...)`
 - `BeAnything()`
 
