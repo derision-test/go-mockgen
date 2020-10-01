@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/derision-test/go-mockgen/internal/integration/testdata"
@@ -23,37 +24,27 @@ func TestTestifyCallsWithArgs(t *testing.T) {
 	mock.Do("foo")
 	mockassert.Called(t, mock.DoFunc)
 	mockassert.CalledOnce(t, mock.DoFunc)
-	mockassert.CalledWith(t, mock.DoFunc, func(t assert.TestingT, v interface{}) bool { // TODO - ergonomics
-		return v.(mocks.ClientDoFuncCall).Arg0 == "foo"
-	})
-	mockassert.NotCalledWith(t, mock.DoFunc, func(t assert.TestingT, v interface{}) bool { // TODO - ergonomics
-		return v.(mocks.ClientDoFuncCall).Arg0 == "bar"
-	})
+	mockassert.CalledWith(t, mock.DoFunc, mockassert.Values("foo"))
+	mockassert.NotCalledWith(t, mock.DoFunc, mockassert.Values("bar"))
 }
 
 func TestTestifyCallsWithVariadicArgs(t *testing.T) {
 	mock := mocks.NewMockClient()
 	mock.DoArgs("foo", 1, 2, 3)
-	mockassert.CalledWith(t, mock.DoArgsFunc, func(t assert.TestingT, v interface{}) bool {
-		// TODO - ergonomics
-		call := v.(mocks.ClientDoArgsFuncCall)
-		return call.Arg0 == "foo" && assert.Equal(t, []interface{}{1, 2, 3}, call.Arg1)
-	})
+	mockassert.CalledWith(t, mock.DoArgsFunc, mockassert.Values("foo", 1, 2, 3))
 
 	mock.DoArgs("bar", 42)
 	mock.DoArgs("baz")
 	mockassert.CalledN(t, mock.DoArgsFunc, 3)
-	mockassert.CalledNWith(t, mock.DoArgsFunc, 2, func(t assert.TestingT, v interface{}) bool {
-		// TODO - ergonomics
-		return assert.Contains(t, v.(mocks.ClientDoArgsFuncCall).Arg0, "a")
-	})
+	mockassert.CalledNWith(t, mock.DoArgsFunc, 2, mockassert.Values(
+		func(v string) bool { return strings.Contains(v, "a") },
+	))
 
 	// Mismatched variadic arg
-	mockassert.NotCalledWith(t, mock.DoArgsFunc, func(t assert.TestingT, v interface{}) bool {
-		// TODO - ergonomics
-		call := v.(mocks.ClientDoArgsFuncCall)
-		return call.Arg0 == "baz" && len(call.Arg1) > 0
-	})
+	mockassert.NotCalledWith(t, mock.DoArgsFunc, mockassert.Values(
+		mockassert.Skip,
+		func(v []interface{}) bool { return len(v) > 0 },
+	))
 }
 
 func TestTestifyPushHook(t *testing.T) {

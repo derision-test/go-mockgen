@@ -7,13 +7,13 @@ import (
 )
 
 func TestCalledMatch(t *testing.T) {
-	ok, err := BeCalled().Match(litFunc{[]litCall{{}}})
+	ok, err := BeCalled().Match(newHistory(mockCall{}))
 	assert.Nil(t, err)
 	assert.True(t, ok)
 }
 
 func TestCalledMatchEmptyHistory(t *testing.T) {
-	ok, err := BeCalled().Match(litFunc{})
+	ok, err := BeCalled().Match(newHistory())
 	assert.Nil(t, err)
 	assert.False(t, ok)
 }
@@ -25,19 +25,19 @@ func TestCalledMatchError(t *testing.T) {
 }
 
 func TestCalledNMatch(t *testing.T) {
-	ok, err := BeCalledN(2).Match(litFunc{[]litCall{{}, {}}})
+	ok, err := BeCalledN(2).Match(newHistory(mockCall{}, mockCall{}))
 	assert.Nil(t, err)
 	assert.True(t, ok)
 }
 
 func TestCalledNMatchEmptyHistory(t *testing.T) {
-	ok, err := BeCalledN(1).Match(litFunc{})
+	ok, err := BeCalledN(1).Match(newHistory())
 	assert.Nil(t, err)
 	assert.False(t, ok)
 }
 
 func TestCalledNMatchMismatchedHistory(t *testing.T) {
-	ok, err := BeCalledN(1).Match(litFunc{[]litCall{{}, {}}})
+	ok, err := BeCalledN(1).Match(newHistory(mockCall{}, mockCall{}))
 	assert.Nil(t, err)
 	assert.False(t, ok)
 }
@@ -49,19 +49,19 @@ func TestCalledNMatchError(t *testing.T) {
 }
 
 func TestCalledOnceMatch(t *testing.T) {
-	ok, err := BeCalledOnce().Match(litFunc{[]litCall{{}}})
+	ok, err := BeCalledOnce().Match(newHistory(mockCall{}))
 	assert.Nil(t, err)
 	assert.True(t, ok)
 }
 
 func TestCalledOnceMatchEmptyHistory(t *testing.T) {
-	ok, err := BeCalledOnce().Match(litFunc{})
+	ok, err := BeCalledOnce().Match(newHistory())
 	assert.Nil(t, err)
 	assert.False(t, ok)
 }
 
 func TestCalledOnceMatchMismatchedHistory(t *testing.T) {
-	ok, err := BeCalledOnce().Match(litFunc{[]litCall{{}, {}}})
+	ok, err := BeCalledOnce().Match(newHistory(mockCall{}, mockCall{}))
 	assert.Nil(t, err)
 	assert.False(t, ok)
 }
