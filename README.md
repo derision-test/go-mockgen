@@ -123,7 +123,7 @@ The following methods are defined in both packages.
 - `CalledOnceWith(t, mockFn, msgAndArgs...)`
 - `CalledNWith(t, mockFn, n, msgAndArgs...)`
 
-THese methods can be used as follows.
+These methods can be used as follows.
 
 ```go
 // cache.Get called 3 times
@@ -136,7 +136,7 @@ mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", "bar"))
 mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", mockassert.Skip))
 ```
 
-#### Gomega integration
+### Gomega integration
 
 This library also contains a set of [Gomega](https://onsi.github.io/gomega/) matchers which simplify assertions over a mocked method's call history.
 
