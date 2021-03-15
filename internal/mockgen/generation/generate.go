@@ -24,7 +24,7 @@ func Generate(ifaces []*types.Interface, opts *Options) error {
 }
 
 func generateFile(ifaces []*types.Interface, opts *Options) error {
-	filename := filepath.Join(opts.OutputDir, opts.OutputFilename) // TODO - rename
+	filename := filepath.Join(opts.OutputDir, opts.OutputFilename)
 
 	exists, err := paths.Exists(filename)
 	if err != nil {
