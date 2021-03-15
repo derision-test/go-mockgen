@@ -30,11 +30,11 @@ The following flags are defined by the binary.
 | package    | p          | The name of the generated package. Is the name of target directory if dirname or filename is supplied by default. |
 | prefix     |            | A prefix used in the name of each mock struct. Should be TitleCase by convention. |
 | interfaces | i          | A whitelist of interfaces to generate given the import paths. |
-| filename   | o          | The target output file. All mocks are writen to this file. |
+| filename   | o          | The target output file. All mocks are written to this file. |
 | dirname    | d          | The target output directory. Each mock will be written to a unique file. |
 | force      | f          | Do not abort if a write to disk would overwrite an existing file. |
 
-If neither dirname nor filename are supplied, then the generated code is printed to standard out.
+If neither dirname nor filename are supplied, then the generated code is written to a unique file in the current directory.
 
 ## Testing with Mocks
 
