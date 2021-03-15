@@ -16,39 +16,34 @@ import (
 )
 
 func Generate(ifaces []*types.Interface, opts *Options) error {
-	if opts.OutputFilename == "" && opts.OutputDir != "" {
-		return generateDirectory(ifaces, opts)
+	if opts.OutputFilename != "" {
+		return generateFile(ifaces, opts)
 	}
 
-	return generateFile(ifaces, opts)
+	return generateDirectory(ifaces, opts)
 }
 
 func generateFile(ifaces []*types.Interface, opts *Options) error {
+	filename := filepath.Join(opts.OutputDir, opts.OutputFilename) // TODO - rename
+
+	exists, err := paths.Exists(filename)
+	if err != nil {
+		return err
+	}
+	if exists && !opts.Force {
+		return fmt.Errorf("filename %s already exists, overwrite with --force", paths.GetRelativePath(filename))
+	}
+
 	content, err := generateContent(ifaces, opts.PkgName, opts.Prefix, opts.OutputImportPath)
 	if err != nil {
 		return err
 	}
 
-	if opts.OutputFilename != "" {
-		exists, err := paths.Exists(opts.OutputFilename)
-		if err != nil {
-			return err
-		}
-		if exists && !opts.Force {
-			return fmt.Errorf("filename %s already exists, overwrite with --force", paths.GetRelativePath(opts.OutputFilename))
-		}
-
-		log.Printf("writing to '%s'\n", paths.GetRelativePath(opts.OutputFilename))
-		return ioutil.WriteFile(opts.OutputFilename, []byte(content), 0644)
-	}
-
-	fmt.Printf("%s\n", content)
-	return nil
+	log.Printf("writing to '%s'\n", paths.GetRelativePath(filename))
+	return ioutil.WriteFile(filename, []byte(content), 0644)
 }
 
 func generateDirectory(ifaces []*types.Interface, opts *Options) error {
-	dirname := filepath.Join(opts.OutputDir, opts.OutputFilename)
-
 	var prefix string
 	if opts.Prefix != "" {
 		prefix = opts.Prefix + "_"
@@ -56,7 +51,7 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 
 	makeFilename := func(interfaceName string) string {
 		filename := fmt.Sprintf("%s%s_mock.go", prefix, interfaceName)
-		return path.Join(dirname, strings.Replace(strings.ToLower(filename), "-", "_", -1))
+		return path.Join(opts.OutputDir, strings.Replace(strings.ToLower(filename), "-", "_", -1))
 	}
 
 	if !opts.Force {
