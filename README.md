@@ -25,15 +25,15 @@ Depending on how you prefer to structure your code, you can either
 
 The following flags are defined by the binary.
 
-| Name               | Short Flag | Description  |
-| ------------------ | ---------- | ------------ |
-| package            | p          | The name of the generated package. Is the name of target directory if dirname or filename is supplied by default. |
-| prefix             |            | A prefix used in the name of each mock struct. Should be TitleCase by convention. |
-| interfaces         | i          | A whitelist of interfaces to generate given the import paths. |
-| filename           | o          | The target output file. All mocks are written to this file. |
-| dirname            | d          | The target output directory. Each mock will be written to a unique file. |
-| force              | f          | Do not abort if a write to disk would overwrite an existing file. |
-| disable-formatting |            | Do not run goimports over the rendered files. |
+| Name               | Short Flag | Description                                                                                                                |
+| ------------------ | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
+| package            | p          | The name of the generated package. Is the name of target directory if dirname or filename is supplied by default.          |
+| prefix             |            | A prefix used in the name of each mock struct. Should be TitleCase by convention.                                          |
+| interfaces         | i          | A whitelist of interfaces to generate given the import paths.                                                              |
+| filename           | o          | The target output file. All mocks are written to this file.                                                                |
+| dirname            | d          | The target output directory. Each mock will be written to a unique file.                                                   |
+| force              | f          | Do not abort if a write to disk would overwrite an existing file.                                                          |
+| disable-formatting |            | Do not run goimports over the rendered files. Formatting is enabled by default and requires `goimports` to be on the PATH. |
 
 If neither dirname nor filename are supplied, then the generated code is written to a unique file in the current directory.
 
@@ -70,7 +70,7 @@ func TestCache(t *testing.T) {
 }
 ```
 
-Hook and return values can also be *stacked* when your test can anticipate multiple calls to the same function. Pushing a hook or a return value will set the hook or return value for *one* invocation of the mocked method. Once this hook or return value has been spent, it will be removed from the queue. Hooks and return values can be interleaved. If the queue is empty, the default hook will be invoked (or the default return values returned).
+Hook and return values can also be _stacked_ when your test can anticipate multiple calls to the same function. Pushing a hook or a return value will set the hook or return value for _one_ invocation of the mocked method. Once this hook or return value has been spent, it will be removed from the queue. Hooks and return values can be interleaved. If the queue is empty, the default hook will be invoked (or the default return values returned).
 
 The following example will test a cache that returns values 50, 51, and 52 in sequence, then panic if there is an unexpected fourth call.
 
@@ -161,13 +161,13 @@ These matchers can be used as follows.
 
 ```go
 // cache.Get called 3 times
-Expect(cache.GetFunc).To(BeCalledN(3)) 
+Expect(cache.GetFunc).To(BeCalledN(3))
 
 // Ensure cache.Set("foo", "bar") was called
-Expect(cache.SetFunc).To(BeCalledWith("foo", "bar")) 
+Expect(cache.SetFunc).To(BeCalledWith("foo", "bar"))
 
 // Ensure cache.Set("foo", _) was called
-Expect(cache.SetFunc).To(BeCalledWith("foo", BeAnything())) 
+Expect(cache.SetFunc).To(BeCalledWith("foo", BeAnything()))
 ```
 
 ## License
