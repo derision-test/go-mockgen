@@ -198,7 +198,7 @@ func generateMockStructFromConstructor(iface *wrappedInterface, outputImportPath
 	var surrogate *jen.Statement
 	if !unicode.IsUpper([]rune(iface.Name)[0]) {
 		name := fmt.Sprintf("surrogateMock%s", iface.titleName)
-		commentFmt := "%s is a copy of the %s interface (from the package %s). It is redefined here as it is unexported in the source packge."
+		commentFmt := "%s is a copy of the %s interface (from the package %s). It is redefined here as it is unexported in the source package."
 		comment := GenerateComment(1, commentFmt, name, iface.Name, iface.ImportPath)
 
 		signatures := []jen.Code{}
