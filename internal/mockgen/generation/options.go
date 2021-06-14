@@ -10,4 +10,5 @@ type Options struct {
 	Prefix            string
 	Force             bool
 	DisableFormatting bool
+	GoImportsBinary   string
 }

@@ -16,8 +16,24 @@ func init() {
 
 func main() {
 	if err := mainErr(); err != nil {
-		log.Fatalf("error: %s\n", err.Error())
+		message := fmt.Sprintf("error: %s\n", err.Error())
+
+		if solvableError, ok := err.(solvableError); ok {
+			message += "\nPossible solutions:\n"
+
+			for _, hint := range solvableError.Solutions() {
+				message += fmt.Sprintf("  - %s\n", hint)
+			}
+
+			message += "\n"
+		}
+
+		log.Fatalf(message)
 	}
+}
+
+type solvableError interface {
+	Solutions() []string
 }
 
 func mainErr() error {

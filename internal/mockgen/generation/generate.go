@@ -85,8 +85,15 @@ func generateAndRender(ifaces []*types.Interface, filename string, opts *Options
 	}
 
 	if !opts.DisableFormatting {
-		if err := exec.Command("goimports", "-w", filename).Run(); err != nil {
-			return fmt.Errorf("failed format file (install goimports on your PATH or run go-mockgen with --disable-formatting): %s", err)
+		if err := exec.Command(opts.GoImportsBinary, "-w", filename).Run(); err != nil {
+			return errorWithSolutions{
+				err: fmt.Errorf("failed to format file: %s", err),
+				solutions: []string{
+					"install goimports on your PATH",
+					"specify a non-standard path to a goimports binary via --goimports",
+					"disable post-render formatting via --disable-formatting",
+				},
+			}
 		}
 	}
 
@@ -109,3 +116,11 @@ func generateContent(ifaces []*types.Interface, pkgName, prefix, outputImportPat
 
 	return buffer.String(), nil
 }
+
+type errorWithSolutions struct {
+	err       error
+	solutions []string
+}
+
+func (e errorWithSolutions) Error() string       { return e.err.Error() }
+func (e errorWithSolutions) Solutions() []string { return e.solutions }

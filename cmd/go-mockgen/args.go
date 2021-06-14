@@ -30,6 +30,7 @@ func parseArgs() (*generation.Options, error) {
 	app.Flag("prefix", "A prefix used in the name of each mock struct. Should be TitleCase by convention.").StringVar(&opts.Prefix)
 	app.Flag("force", "Do not abort if a write to disk would overwrite an existing file.").Short('f').BoolVar(&opts.Force)
 	app.Flag("disable-formatting", "Do not run goimports over the rendered files.").BoolVar(&opts.DisableFormatting)
+	app.Flag("goimports", "Path to the goimports binary.").Default("goimports").StringVar(&opts.GoImportsBinary)
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		return nil, err
