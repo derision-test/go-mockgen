@@ -1,0 +1,27 @@
+version: 2.1
+
+executors:
+  go:
+    docker:
+      - image: circleci/golang:1.16
+    working_directory: ~/go-mockgen
+
+jobs:
+  test:
+    executor: go
+    steps:
+      - checkout
+      - run: go get github.com/mattn/goveralls
+      - run:
+          name: Run unit tests
+          command: |
+            go get ./...
+            go install ./cmd/go-mockgen
+            go generate ./...
+            goveralls -covermode=atomic -package=./... -race -service=circle-ci -v
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
