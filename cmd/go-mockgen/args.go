@@ -21,6 +21,8 @@ func parseArgs() (*generation.Options, error) {
 	}
 
 	app := kingpin.New(consts.Name, consts.Description).Version(consts.Version)
+	app.UsageWriter(os.Stdout)
+
 	app.Arg("path", "The import paths used to search for eligible interfaces").Required().StringsVar(&opts.ImportPaths)
 	app.Flag("package", "The name of the generated package. It will be inferred from the output options by default.").Short('p').StringVar(&opts.PkgName)
 	app.Flag("interfaces", "A whitelist of interfaces to generate given the import paths.").Short('i').StringsVar(&opts.Interfaces)
