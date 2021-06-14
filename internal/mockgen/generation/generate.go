@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -34,13 +35,7 @@ func generateFile(ifaces []*types.Interface, opts *Options) error {
 		return fmt.Errorf("filename %s already exists, overwrite with --force", paths.GetRelativePath(filename))
 	}
 
-	content, err := generateContent(ifaces, opts.PkgName, opts.Prefix, opts.OutputImportPath)
-	if err != nil {
-		return err
-	}
-
-	log.Printf("writing to '%s'\n", paths.GetRelativePath(filename))
-	return ioutil.WriteFile(filename, []byte(content), 0644)
+	return generateAndRender(ifaces, filename, opts)
 }
 
 func generateDirectory(ifaces []*types.Interface, opts *Options) error {
@@ -70,15 +65,28 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 	}
 
 	for _, iface := range ifaces {
-		content, err := generateContent([]*types.Interface{iface}, opts.PkgName, opts.Prefix, opts.OutputImportPath)
-		if err != nil {
+		if err := generateAndRender([]*types.Interface{iface}, makeFilename(iface.Name), opts); err != nil {
 			return err
 		}
+	}
 
-		filename := makeFilename(iface.Name)
-		log.Printf("writing to '%s'\n", paths.GetRelativePath(filename))
-		if err := ioutil.WriteFile(filename, []byte(content), 0644); err != nil {
-			return err
+	return nil
+}
+
+func generateAndRender(ifaces []*types.Interface, filename string, opts *Options) error {
+	content, err := generateContent(ifaces, opts.PkgName, opts.Prefix, opts.OutputImportPath)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("writing to '%s'\n", paths.GetRelativePath(filename))
+	if err := ioutil.WriteFile(filename, []byte(content), 0644); err != nil {
+		return err
+	}
+
+	if !opts.DisableFormatting {
+		if err := exec.Command("goimports", "-w", filename).Run(); err != nil {
+			return fmt.Errorf("failed format file (install goimports on your PATH or run go-mockgen with --disable-formatting): %s", err)
 		}
 	}
 
