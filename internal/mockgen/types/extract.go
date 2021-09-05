@@ -14,7 +14,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Extract(importPaths []string, targetNames []string) ([]*Interface, error) {
+func Extract(importPaths []string, targetNames, excludeNames []string) ([]*Interface, error) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
@@ -37,7 +37,7 @@ func Extract(importPaths []string, targetNames []string) ([]*Interface, error) {
 
 	ifaces := []*Interface{}
 	for _, name := range pkgs.GetNames() {
-		iface, err := getInterface(pkgs, name, targetNames)
+		iface, err := getInterface(pkgs, name, targetNames, excludeNames)
 		if err != nil {
 			return nil, err
 		}
@@ -68,8 +68,8 @@ func getPackage(workingDirectory string, importPath, path string) (*Package, err
 	return NewPackage(path, visitor.types), nil
 }
 
-func getInterface(pkgs *Packages, name string, targetNames []string) (*Interface, error) {
-	if !shouldInclude(name, targetNames) {
+func getInterface(pkgs *Packages, name string, targetNames, excludeNames []string) (*Interface, error) {
+	if !shouldInclude(name, targetNames, excludeNames) {
 		return nil, nil
 	}
 
@@ -94,7 +94,13 @@ func getInterface(pkgs *Packages, name string, targetNames []string) (*Interface
 	return iface, nil
 }
 
-func shouldInclude(name string, targetNames []string) bool {
+func shouldInclude(name string, targetNames, excludeNames []string) bool {
+	for _, v := range excludeNames {
+		if strings.ToLower(v) == strings.ToLower(name) {
+			return false
+		}
+	}
+
 	for _, v := range targetNames {
 		if strings.ToLower(v) == strings.ToLower(name) {
 			return true

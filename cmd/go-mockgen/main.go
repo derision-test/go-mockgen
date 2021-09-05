@@ -42,7 +42,7 @@ func mainErr() error {
 		return err
 	}
 
-	ifaces, err := types.Extract(opts.ImportPaths, opts.Interfaces)
+	ifaces, err := types.Extract(opts.ImportPaths, opts.Interfaces, opts.Exclude)
 	if err != nil {
 		return err
 	}

@@ -25,7 +25,8 @@ func parseArgs() (*generation.Options, error) {
 
 	app.Arg("path", "The import paths used to search for eligible interfaces").Required().StringsVar(&opts.ImportPaths)
 	app.Flag("package", "The name of the generated package. It will be inferred from the output options by default.").Short('p').StringVar(&opts.PkgName)
-	app.Flag("interfaces", "A whitelist of interfaces to generate given the import paths.").Short('i').StringsVar(&opts.Interfaces)
+	app.Flag("interfaces", "A list of target interfaces to generate defined in the given the import paths.").Short('i').StringsVar(&opts.Interfaces)
+	app.Flag("exclude", "A list of interfaces to exclude from generation. Mocks for all other exported interfaces defined in the given import paths are generated.").Short('e').StringsVar(&opts.Exclude)
 	app.Flag("dirname", "The target output directory. Each mock will be written to a unique file.").Short('d').StringVar(&opts.OutputDir)
 	app.Flag("filename", "The target output file. All mocks are written to this file.").Short('o').StringVar(&opts.OutputFilename)
 	app.Flag("import-path", "The import path of the generated package. It will be inferred from the target directory by default.").StringVar(&opts.PkgName)
@@ -95,6 +96,10 @@ var goIdentifierPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*[A-Za-z])?$
 func validateOptions(opts *generation.Options) (bool, error) {
 	if opts.PkgName != "" && opts.OutputImportPath != "" {
 		return false, fmt.Errorf("package name and output import path are mutually exclusive")
+	}
+
+	if len(opts.Interfaces) != 0 && len(opts.Exclude) != 0 {
+		return false, fmt.Errorf("interface lists and exclude lists are mutually exclusive")
 	}
 
 	if opts.OutputImportPath == "" {
