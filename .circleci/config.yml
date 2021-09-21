@@ -15,6 +15,7 @@ jobs:
       - run:
           name: Run tests
           command: |
+            go generate ./...
             goveralls -covermode=atomic -package=./... -race -service=circle-ci -v
 
 workflows:
