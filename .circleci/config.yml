@@ -13,11 +13,8 @@ jobs:
       - checkout
       - run: go get github.com/mattn/goveralls
       - run:
-          name: Run unit tests
+          name: Run tests
           command: |
-            go get ./...
-            go get golang.org/x/tools/cmd/goimports
-            go install ./cmd/go-mockgen
             go generate ./...
             goveralls -covermode=atomic -package=./... -race -service=circle-ci -v
 
