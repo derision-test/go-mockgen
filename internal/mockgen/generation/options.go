@@ -12,4 +12,5 @@ type Options struct {
 	Force             bool
 	DisableFormatting bool
 	GoImportsBinary   string
+	ForTest           bool
 }

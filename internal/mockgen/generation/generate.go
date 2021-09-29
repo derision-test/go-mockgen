@@ -25,7 +25,13 @@ func Generate(ifaces []*types.Interface, opts *Options) error {
 }
 
 func generateFile(ifaces []*types.Interface, opts *Options) error {
-	filename := filepath.Join(opts.OutputDir, opts.OutputFilename)
+	basename := opts.OutputFilename
+	if opts.ForTest {
+		ext := filepath.Ext(basename)
+		basename = strings.TrimSuffix(basename, ext) + "_test" + ext
+	}
+
+	filename := filepath.Join(opts.OutputDir, basename)
 
 	exists, err := paths.Exists(filename)
 	if err != nil {
@@ -44,8 +50,13 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 		prefix = opts.Prefix + "_"
 	}
 
+	suffix := "_mock"
+	if opts.ForTest {
+		suffix += "_test"
+	}
+
 	makeFilename := func(interfaceName string) string {
-		filename := fmt.Sprintf("%s%s_mock.go", prefix, interfaceName)
+		filename := fmt.Sprintf("%s%s%s.go", prefix, interfaceName, suffix)
 		return path.Join(opts.OutputDir, strings.Replace(strings.ToLower(filename), "-", "_", -1))
 	}
 
@@ -74,7 +85,12 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 }
 
 func generateAndRender(ifaces []*types.Interface, filename string, opts *Options) error {
-	content, err := generateContent(ifaces, opts.PkgName, opts.Prefix, opts.OutputImportPath)
+	pkgName := opts.PkgName
+	if opts.ForTest {
+		pkgName += "_test"
+	}
+
+	content, err := generateContent(ifaces, pkgName, opts.Prefix, opts.OutputImportPath)
 	if err != nil {
 		return err
 	}

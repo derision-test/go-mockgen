@@ -34,6 +34,7 @@ func parseArgs() (*generation.Options, error) {
 	app.Flag("force", "Do not abort if a write to disk would overwrite an existing file.").Short('f').BoolVar(&opts.Force)
 	app.Flag("disable-formatting", "Do not run goimports over the rendered files.").BoolVar(&opts.DisableFormatting)
 	app.Flag("goimports", "Path to the goimports binary.").Default("goimports").StringVar(&opts.GoImportsBinary)
+	app.Flag("for-test", "Append _test suffix to generated package names and file names.").Default("false").BoolVar(&opts.ForTest)
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		return nil, err
@@ -94,10 +95,6 @@ func validateOutputPaths(opts *generation.Options) (bool, error) {
 var goIdentifierPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*[A-Za-z])?$")
 
 func validateOptions(opts *generation.Options) (bool, error) {
-	if opts.PkgName != "" && opts.OutputImportPath != "" {
-		return false, fmt.Errorf("package name and output import path are mutually exclusive")
-	}
-
 	if len(opts.Interfaces) != 0 && len(opts.Exclude) != 0 {
 		return false, fmt.Errorf("interface lists and exclude lists are mutually exclusive")
 	}
