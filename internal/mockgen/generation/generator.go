@@ -51,6 +51,7 @@ func generateInterface(file *jen.File, iface *types.Interface, prefix, outputImp
 	topLevelGenerators := []topLevelGenerator{
 		generateMockStruct,
 		generateMockStructConstructor,
+		generateMockStructStrictConstructor,
 		generateMockStructFromConstructor,
 	}
 
@@ -167,6 +168,57 @@ func generateMockStructConstructor(iface *wrappedInterface, outputImportPath str
 		innerStructField := Compose(
 			jen.Line(),
 			Compose(jen.Id("defaultHook").Op(":"), zeroFunction),
+		)
+
+		field := jen.
+			Line().
+			Id(fmt.Sprintf(funcFieldFormat, method.Name)).
+			Op(":").
+			Op("&").
+			Id(fmt.Sprintf(funcStructFormat, iface.prefix, iface.titleName, method.Name)).
+			Values(innerStructField, jen.Line())
+
+		constructorFields = append(constructorFields, field)
+	}
+
+	constructorFields = append(constructorFields, jen.Line())
+
+	functionDecl := GenerateFunction(
+		name,
+		nil,
+		[]jen.Code{jen.Op("*").Id(iface.mockStructName)},
+		jen.Return().Op("&").Id(iface.mockStructName).Values(constructorFields...),
+	)
+
+	return Compose(comment, functionDecl)
+}
+
+func generateMockStructStrictConstructor(iface *wrappedInterface, outputImportPath string) jen.Code {
+	name := fmt.Sprintf("NewStrict%s", iface.mockStructName)
+	commentFmt := "%s creates a new mock of the %s interface. All methods panic on invocation, unless overwritten."
+	comment := GenerateComment(1, commentFmt, name, iface.Name)
+
+	constructorFields := []jen.Code{}
+	for _, method := range iface.wrappedMethods {
+		zeroes := []jen.Code{}
+		for _, typ := range method.Results {
+			zeroes = append(zeroes, GenerateZeroValue(
+				typ,
+				iface.ImportPath,
+				outputImportPath,
+			))
+		}
+
+		panickingFunction := GenerateFunction(
+			"",
+			method.paramTypes,
+			GenerateResultTypes(method.Method, iface.ImportPath, outputImportPath),
+			jen.Panic(jen.Lit(fmt.Sprintf("unexpected invocation of %s.%s", iface.mockStructName, method.Method.Name))),
+		)
+
+		innerStructField := Compose(
+			jen.Line(),
+			Compose(jen.Id("defaultHook").Op(":"), panickingFunction),
 		)
 
 		field := jen.

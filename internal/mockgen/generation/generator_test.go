@@ -132,6 +132,34 @@ func TestGenerateMockStructConstructor(t *testing.T) {
 	assert.Equal(t, expected, fmt.Sprintf("%#v", code))
 }
 
+func TestGenerateMockStructStrictConstructor(t *testing.T) {
+	code := generateMockStructStrictConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	expected := strip(`
+		// NewStrictMockTestClient creates a new mock of the Client interface. All
+		// methods panic on invocation, unless overwritten.
+		func NewStrictMockTestClient() *MockTestClient {
+			return &MockTestClient{
+				StatusFunc: &TestClientStatusFunc{
+					defaultHook: func() (string, bool) {
+						panic("unexpected invocation of MockTestClient.Status")
+					},
+				},
+				DoFunc: &TestClientDoFunc{
+					defaultHook: func(string) bool {
+						panic("unexpected invocation of MockTestClient.Do")
+					},
+				},
+				DofFunc: &TestClientDofFunc{
+					defaultHook: func(string, ...string) bool {
+						panic("unexpected invocation of MockTestClient.Dof")
+					},
+				},
+			}
+		}
+	`)
+	assert.Equal(t, expected, fmt.Sprintf("%#v", code))
+}
+
 func TestGenerateMockStructFromConstructor(t *testing.T) {
 	code := generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
 	expected := strip(`
