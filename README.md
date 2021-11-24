@@ -36,8 +36,7 @@ The following flags are defined by the binary.
 | force              | f          | Do not abort if a write to disk would overwrite an existing file.                                                 |
 | disable-formatting |            | Do not run goimports over the rendered files (enabled by default).                                                |
 | goimports          |            | Path to the goimports binary (uses goimports on your PATH by default).                                            |
-
-If neither dirname nor filename are supplied, then the generated code is written to a unique file in the current directory.
+| for-test           |            | Append _test suffix to generated package names and file names.                                                    |
 
 ## Testing with Mocks
 
