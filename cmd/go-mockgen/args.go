@@ -109,7 +109,7 @@ func validateOptions(opts *generation.Options) (bool, error) {
 	}
 
 	if opts.PkgName == "" {
-		opts.PkgName = opts.OutputImportPath[strings.LastIndex(opts.OutputImportPath, "/")+1:]
+		opts.PkgName = opts.OutputImportPath[strings.LastIndex(opts.OutputImportPath, string(os.PathSeparator))+1:]
 	}
 
 	if !goIdentifierPattern.Match([]byte(opts.PkgName)) {

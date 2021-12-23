@@ -59,7 +59,7 @@ func ResolveImportPath(wd, importPath string) (string, string) {
 
 func module(dirname string) (string, string, bool) {
 	wd := dirname
-	for wd != srcpath && wd != "/" {
+	for wd != srcpath && wd != string(os.PathSeparator) {
 		if module, ok := gomod(wd); ok {
 			return module, wd, true
 		}
