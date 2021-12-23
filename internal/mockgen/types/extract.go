@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"go/ast"
-	"go/types"
 	"log"
 	"os"
 	"sort"
@@ -20,24 +19,16 @@ func Extract(importPaths []string, targetNames, excludeNames []string) ([]*Inter
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
 	}
 
-	allPkgs := map[string]*Package{}
-	for _, importPath := range importPaths {
-		path, dir := paths.ResolveImportPath(workingDirectory, importPath)
-		log.Printf("parsing package '%s'\n", paths.GetRelativePath(dir))
-
-		pkg, err := getPackage(workingDirectory, importPath, path)
-		if err != nil {
-			return nil, err
-		}
-
-		allPkgs[path] = pkg
+	packageTypes, err := gatherAllPackageTypes(workingDirectory, importPaths)
+	if err != nil {
+		return nil, err
 	}
 
-	pkgs := NewPackages(allPkgs)
+	typeNames := gatherAllPackageTypeNames(packageTypes)
 
-	ifaces := []*Interface{}
-	for _, name := range pkgs.GetNames() {
-		iface, err := getInterface(pkgs, name, targetNames, excludeNames)
+	ifaces := make([]*Interface, 0, len(typeNames))
+	for _, name := range typeNames {
+		iface, err := extractInterface(packageTypes, name, targetNames, excludeNames)
 		if err != nil {
 			return nil, err
 		}
@@ -50,8 +41,25 @@ func Extract(importPaths []string, targetNames, excludeNames []string) ([]*Inter
 	return ifaces, nil
 }
 
-func getPackage(workingDirectory string, importPath, path string) (*Package, error) {
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.LoadSyntax}, importPath)
+func gatherAllPackageTypes(workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
+	packageTypes := make(map[string]map[string]*Interface, len(importPaths))
+	for _, importPath := range importPaths {
+		path, dir := paths.ResolveImportPath(workingDirectory, importPath)
+		log.Printf("parsing package '%s'\n", paths.GetRelativePath(dir))
+
+		types, err := gatherTypesForPackage(workingDirectory, importPath, path)
+		if err != nil {
+			return nil, err
+		}
+
+		packageTypes[path] = types
+	}
+
+	return packageTypes, nil
+}
+
+func gatherTypesForPackage(workingDirectory string, importPath, path string) (map[string]*Interface, error) {
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not load package %s (%s)", importPath, err.Error())
 	}
@@ -65,21 +73,46 @@ func getPackage(workingDirectory string, importPath, path string) (*Package, err
 		ast.Walk(visitor, file)
 	}
 
-	return NewPackage(path, visitor.types), nil
+	return visitor.types, nil
 }
 
-func getInterface(pkgs *Packages, name string, targetNames, excludeNames []string) (*Interface, error) {
+func gatherAllPackageTypeNames(packageTypes map[string]map[string]*Interface) []string {
+	nameMap := map[string]struct{}{}
+	for _, pkg := range packageTypes {
+		for name := range pkg {
+			nameMap[name] = struct{}{}
+		}
+	}
+
+	names := make([]string, 0, len(nameMap))
+	for name := range nameMap {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
+}
+
+func extractInterface(packageTypes map[string]map[string]*Interface, name string, targetNames, excludeNames []string) (*Interface, error) {
 	if !shouldInclude(name, targetNames, excludeNames) {
 		return nil, nil
 	}
 
-	iface, err := pkgs.GetInterface(name)
-	if err != nil || iface == nil {
-		return nil, err
+	candidates := make([]*Interface, 0, 1)
+	for _, pkg := range packageTypes {
+		if t, ok := pkg[name]; ok {
+			candidates = append(candidates, t)
+
+			if len(candidates) > 1 {
+				return nil, fmt.Errorf("type '%s' is multiply-defined in supplied import paths", name)
+			}
+		}
 	}
-	if iface == nil {
+	if len(candidates) == 0 {
 		return nil, nil
 	}
+
+	iface := candidates[0]
 
 	for _, method := range iface.Methods {
 		if !unicode.IsUpper([]rune(method.Name)[0]) {
@@ -108,85 +141,4 @@ func shouldInclude(name string, targetNames, excludeNames []string) bool {
 	}
 
 	return len(targetNames) == 0
-}
-
-type visitor struct {
-	importPath string
-	pkgType    *types.Package
-	types      map[string]*Interface
-}
-
-func newVisitor(importPath string, pkgType *types.Package) *visitor {
-	return &visitor{
-		importPath: importPath,
-		pkgType:    pkgType,
-		types:      map[string]*Interface{},
-	}
-}
-
-func (v *visitor) Visit(node ast.Node) ast.Visitor {
-	switch n := node.(type) {
-	case *ast.GenDecl:
-		for _, spec := range n.Specs {
-			if typeSpec, ok := spec.(*ast.TypeSpec); ok {
-				name := typeSpec.Name.Name
-				_, obj := v.pkgType.Scope().Innermost(typeSpec.Pos()).LookupParent(name, 0)
-
-				switch t := obj.Type().Underlying().(type) {
-				case *types.Interface:
-					v.types[name] = deconstructInterface(name, v.importPath, t)
-				}
-			}
-		}
-	}
-
-	return v
-}
-
-func deconstructInterface(name, importPath string, typeSpec *types.Interface) *Interface {
-	methodMap := map[string]*Method{}
-	for i := 0; i < typeSpec.NumMethods(); i++ {
-		method := typeSpec.Method(i)
-		name := method.Name()
-		methodMap[name] = deconstructMethod(name, method.Type().(*types.Signature))
-	}
-
-	methodNames := []string{}
-	for k := range methodMap {
-		methodNames = append(methodNames, k)
-	}
-	sort.Strings(methodNames)
-
-	methods := []*Method{}
-	for _, name := range methodNames {
-		methods = append(methods, methodMap[name])
-	}
-
-	return &Interface{
-		Name:       name,
-		ImportPath: importPath,
-		Type:       InterfaceTypeInterface,
-		Methods:    methods,
-	}
-}
-
-func deconstructMethod(name string, signature *types.Signature) *Method {
-	ps := signature.Params()
-	params := []types.Type{}
-	for i := 0; i < ps.Len(); i++ {
-		params = append(params, ps.At(i).Type())
-	}
-
-	rs := signature.Results()
-	results := []types.Type{}
-	for i := 0; i < rs.Len(); i++ {
-		results = append(results, rs.At(i).Type())
-	}
-
-	return &Method{
-		Name:     name,
-		Params:   params,
-		Results:  results,
-		Variadic: signature.Variadic(),
-	}
 }

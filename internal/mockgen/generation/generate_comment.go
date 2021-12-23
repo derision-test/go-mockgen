@@ -15,12 +15,7 @@ var (
 	maxLevels    = 3
 )
 
-func Compose(stmt1 *jen.Statement, stmt2 jen.Code) *jen.Statement {
-	composed := append(*stmt1, stmt2)
-	return &composed
-}
-
-func GenerateComment(level int, format string, args ...interface{}) *jen.Statement {
+func generateComment(level int, format string, args ...interface{}) *jen.Statement {
 	allowance := maxAllowance - indent*level - 3
 	if allowance < minAllowance {
 		allowance = minAllowance

@@ -47,7 +47,7 @@ func mainErr() error {
 		return err
 	}
 
-	nameMap := map[string]struct{}{}
+	nameMap := make(map[string]struct{}, len(ifaces))
 	for _, t := range ifaces {
 		nameMap[strings.ToLower(t.Name)] = struct{}{}
 	}

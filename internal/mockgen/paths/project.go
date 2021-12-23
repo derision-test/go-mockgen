@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-var srcpath = filepath.Join(Gopath(), "src")
+var srcpath = filepath.Join(gopath(), "src")
 var modulePattern = regexp.MustCompile(`^module\s+(.+)$`)
 
 func InferImportPath(dirname string) (string, bool) {
-	if module, wd, ok := Module(dirname); ok {
+	if module, wd, ok := module(dirname); ok {
 		return filepath.Join(module, dirname[len(wd):]), true
 	}
 
@@ -26,7 +26,7 @@ func InferImportPath(dirname string) (string, bool) {
 
 func ResolveImportPath(wd, importPath string) (string, string) {
 	// See if we're in a module and generating for our own package
-	if module, baseDir, ok := Module(wd); ok && strings.HasPrefix(importPath, module) {
+	if module, baseDir, ok := module(wd); ok && strings.HasPrefix(importPath, module) {
 		return importPath, filepath.Join(baseDir, importPath[len(module):])
 	}
 
@@ -57,10 +57,10 @@ func ResolveImportPath(wd, importPath string) (string, string) {
 	return importPath, importPath
 }
 
-func Module(dirname string) (string, string, bool) {
+func module(dirname string) (string, string, bool) {
 	wd := dirname
 	for wd != srcpath && wd != "/" {
-		if module, ok := Gomod(wd); ok {
+		if module, ok := gomod(wd); ok {
 			return module, wd, true
 		}
 
@@ -70,7 +70,7 @@ func Module(dirname string) (string, string, bool) {
 	return "", "", false
 }
 
-func Gomod(dirname string) (string, bool) {
+func gomod(dirname string) (string, bool) {
 	content, err := ioutil.ReadFile(filepath.Join(dirname, "go.mod"))
 	if err != nil {
 		return "", false
@@ -85,7 +85,7 @@ func Gomod(dirname string) (string, bool) {
 	return "", false
 }
 
-func Gopath() string {
+func gopath() string {
 	if gopath := os.Getenv("GOPATH"); gopath != "" {
 		return gopath
 	}

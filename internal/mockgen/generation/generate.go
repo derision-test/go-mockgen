@@ -16,6 +16,21 @@ import (
 	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 )
 
+type Options struct {
+	ImportPaths       []string
+	PkgName           string
+	Interfaces        []string
+	Exclude           []string
+	OutputFilename    string
+	OutputDir         string
+	OutputImportPath  string
+	Prefix            string
+	Force             bool
+	DisableFormatting bool
+	GoImportsBinary   string
+	ForTest           bool
+}
+
 func Generate(ifaces []*types.Interface, opts *Options) error {
 	if opts.OutputFilename != "" {
 		return generateFile(ifaces, opts)
@@ -61,7 +76,7 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 	}
 
 	if !opts.Force {
-		allPaths := []string{}
+		allPaths := make([]string, 0, len(ifaces))
 		for _, iface := range ifaces {
 			allPaths = append(allPaths, makeFilename(iface.Name))
 		}
@@ -133,10 +148,42 @@ func generateContent(ifaces []*types.Interface, pkgName, prefix, outputImportPat
 	return buffer.String(), nil
 }
 
-type errorWithSolutions struct {
-	err       error
-	solutions []string
-}
+func generateInterface(file *jen.File, iface *types.Interface, prefix, outputImportPath string) {
+	topLevelGenerators := []func(*wrappedInterface, string) jen.Code{
+		generateMockStruct,
+		generateMockStructConstructor,
+		generateMockStructStrictConstructor,
+		generateMockStructFromConstructor,
+	}
 
-func (e errorWithSolutions) Error() string       { return e.err.Error() }
-func (e errorWithSolutions) Solutions() []string { return e.solutions }
+	methodGenerators := []func(*wrappedInterface, *wrappedMethod, string) jen.Code{
+		generateMockFuncStruct,
+		generateMockInterfaceMethod,
+		generateMockFuncSetHookMethod,
+		generateMockFuncPushHookMethod,
+		generateMockFuncSetReturnMethod,
+		generateMockFuncPushReturnMethod,
+		generateMockFuncNextHookMethod,
+		generateMockFuncAppendCallMethod,
+		generateMockFuncHistoryMethod,
+		generateMockFuncCallStruct,
+		generateMockFuncCallArgsMethod,
+		generateMockFuncCallResultsMethod,
+	}
+
+	titleName := strings.ToUpper(string(iface.Name[0])) + iface.Name[1:]
+	mockStructName := fmt.Sprintf("Mock%s%s", prefix, titleName)
+	wrappedInterface := wrapInterface(iface, prefix, titleName, mockStructName, outputImportPath)
+
+	for _, generator := range topLevelGenerators {
+		file.Add(generator(wrappedInterface, outputImportPath))
+		file.Line()
+	}
+
+	for _, method := range wrappedInterface.wrappedMethods {
+		for _, generator := range methodGenerators {
+			file.Add(generator(wrappedInterface, method, outputImportPath))
+			file.Line()
+		}
+	}
+}
