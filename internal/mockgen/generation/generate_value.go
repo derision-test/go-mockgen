@@ -6,7 +6,7 @@ import (
 	"github.com/dave/jennifer/jen"
 )
 
-func GenerateZeroValue(typ types.Type, importPath, outputImportPath string) *jen.Statement {
+func generateZeroValue(typ types.Type, importPath, outputImportPath string) *jen.Statement {
 	switch t := typ.(type) {
 	case *types.Basic:
 		kind := t.Kind()
@@ -21,20 +21,21 @@ func GenerateZeroValue(typ types.Type, importPath, outputImportPath string) *jen
 
 	case *types.Named:
 		if shouldEmitNamedType(t) {
-			return Compose(generateQualifiedName(t, importPath, outputImportPath), jen.Block())
+			return compose(generateQualifiedName(t, importPath, outputImportPath), jen.Block())
 		}
 
-		return GenerateZeroValue(t.Underlying(), importPath, outputImportPath)
+		return generateZeroValue(t.Underlying(), importPath, outputImportPath)
 
 	case *types.Struct:
-		return GenerateType(typ, importPath, outputImportPath, false).Block()
+		return generateType(typ, importPath, outputImportPath, false).Block()
 	}
 
 	return jen.Nil()
 }
 
 func isIntegerType(kind types.BasicKind) bool {
-	kinds := []types.BasicKind{
+	switch kind {
+	case
 		types.Int,
 		types.Int8,
 		types.Int16,
@@ -48,19 +49,16 @@ func isIntegerType(kind types.BasicKind) bool {
 		types.Uintptr,
 		types.Float32,
 		types.Float64,
-		types.Byte,
-		types.Rune,
 		types.Complex64,
-		types.Complex128,
-	}
+		types.Complex128:
+		// Note:
+		// ~types.Byte -> Uint8
+		// ~types.Rune -> types.Int32
+		return true
 
-	for _, k := range kinds {
-		if k == kind {
-			return true
-		}
+	default:
+		return false
 	}
-
-	return false
 }
 
 func shouldEmitNamedType(t *types.Named) bool {

@@ -35,7 +35,7 @@ func GetCallHistory(v interface{}) ([]CallInstance, bool) {
 		return nil, false
 	}
 
-	calls := []CallInstance{}
+	calls := make([]CallInstance, 0, history.Len())
 	for i := 0; i < history.Len(); i++ {
 		calls = append(calls, history.Index(i).Interface().(CallInstance))
 	}
