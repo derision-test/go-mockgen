@@ -8,6 +8,9 @@ import (
 
 func generateZeroValue(typ types.Type, importPath, outputImportPath string) *jen.Statement {
 	switch t := typ.(type) {
+	case *types.Array:
+		return generateType(typ, importPath, outputImportPath, false).Block()
+
 	case *types.Basic:
 		kind := t.Kind()
 
