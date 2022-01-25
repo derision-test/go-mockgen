@@ -15,6 +15,8 @@ func generateType(typ types.Type, importPath, outputImportPath string, variadic 
 	}
 
 	switch t := typ.(type) {
+	case *types.Array:
+		return generateArrayType(t, recur)
 	case *types.Basic:
 		return generateBasicType(t, recur)
 	case *types.Chan:
@@ -37,6 +39,10 @@ func generateType(typ types.Type, importPath, outputImportPath string, variadic 
 	default:
 		panic(fmt.Sprintf("unsupported case: %#v\n", typ))
 	}
+}
+
+func generateArrayType(t *types.Array, generate typeGenerator) *jen.Statement {
+	return compose(jen.Index(jen.Lit(int(t.Len()))), generate(t.Elem()))
 }
 
 func generateBasicType(t *types.Basic, _ typeGenerator) *jen.Statement {
