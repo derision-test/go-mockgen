@@ -75,7 +75,8 @@ func generateInterfaceType(t *types.Interface, generate typeGenerator) *jen.Stat
 
 	methods := make([]jen.Code, 0, t.NumMethods())
 	for i := 0; i < t.NumMethods(); i++ {
-		methods = append(methods, compose(jen.Id(t.Method(i).Name()), generate(t.Method(i).Type())))
+		params, results := generatePartialSignature(t.Method(i).Type().(*types.Signature), generate)
+		methods = append(methods, jen.Id(t.Method(i).Name()).Params(params...).Params(results...))
 	}
 
 	return jen.Interface(append(embeds, methods...)...)
@@ -105,17 +106,22 @@ func generatePointerType(t *types.Pointer, generate typeGenerator) *jen.Statemen
 }
 
 func generateSignatureType(t *types.Signature, generate typeGenerator) *jen.Statement {
-	params := make([]jen.Code, 0, t.Params().Len())
+	params, results := generatePartialSignature(t, generate)
+	return jen.Func().Params(params...).Params(results...)
+}
+
+func generatePartialSignature(t *types.Signature, generate typeGenerator) (params, results []jen.Code) {
+	params = make([]jen.Code, 0, t.Params().Len())
 	for i := 0; i < t.Params().Len(); i++ {
 		params = append(params, compose(jen.Id(t.Params().At(i).Name()), generate(t.Params().At(i).Type())))
 	}
 
-	results := make([]jen.Code, 0, t.Results().Len())
+	results = make([]jen.Code, 0, t.Results().Len())
 	for i := 0; i < t.Results().Len(); i++ {
 		results = append(results, generate(t.Results().At(i).Type()))
 	}
 
-	return jen.Func().Params(params...).Params(results...)
+	return params, results
 }
 
 func generateSliceType(t *types.Slice, variadic bool, generate typeGenerator) *jen.Statement {
