@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+No chnages yet.
+
+## [v1.2.0] - 2022-03-28
+
 ### Changed
 
 - Updated x/tools for Go 1.18 support. [#22](https://github.com/derision-test/go-mockgen/pull/22)
@@ -45,9 +49,10 @@ No significant changes (only corrected version output).
 - We now run `goimports` over rendered files. [096f848](https://github.com/derision-test/go-mockgen/commit/096f848333579e185c8018ff2d17688e4b5f6f27)
 - Fixed output paths when directories are generated. [#10](https://github.com/derision-test/go-mockgen/pull/10)
 
-[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v1.2.0...HEAD
 [v1.0.0]: https://github.com/derision-test/go-mockgen/releases/tag/v1.0.0
 [v1.1.1]: https://github.com/derision-test/go-mockgen/compare/v1.0.0...v1.1.1
 [v1.1.2]: https://github.com/derision-test/go-mockgen/compare/v1.1.1...v1.1.2
 [v1.1.3]: https://github.com/derision-test/go-mockgen/compare/v1.1.2...v1.1.3
 [v1.1.4]: https://github.com/derision-test/go-mockgen/compare/v1.1.3...v1.1.4
+[v1.2.0]: https://github.com/derision-test/go-mockgen/compare/v1.1.4...v1.2.0
