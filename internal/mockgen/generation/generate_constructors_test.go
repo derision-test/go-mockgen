@@ -15,18 +15,18 @@ func TestGenerateMockStructConstructor(t *testing.T) {
 		func NewMockTestClient() *MockTestClient {
 			return &MockTestClient{
 				StatusFunc: &TestClientStatusFunc{
-					defaultHook: func() (string, bool) {
-						return "", false
+					defaultHook: func() (r0 string, r1 bool) {
+						return
 					},
 				},
 				DoFunc: &TestClientDoFunc{
-					defaultHook: func(string) bool {
-						return false
+					defaultHook: func(string) (r0 bool) {
+						return
 					},
 				},
 				DofFunc: &TestClientDofFunc{
-					defaultHook: func(string, ...string) bool {
-						return false
+					defaultHook: func(string, ...string) (r0 bool) {
+						return
 					},
 				},
 			}

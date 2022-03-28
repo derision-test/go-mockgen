@@ -85,14 +85,14 @@ func generateConstructor(
 }
 
 func generateNoopFunction(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
-	zeroValues := make([]jen.Code, 0, len(method.Results))
-	for _, typ := range method.Results {
-		zeroValues = append(zeroValues, generateZeroValue(typ, iface.ImportPath, outputImportPath))
+	rt := make([]jen.Code, 0, len(method.resultTypes))
+	for i, resultType := range method.resultTypes {
+		// (r0 <typ1>, r1 <type2>, ...)
+		rt = append(rt, compose(jen.Id(fmt.Sprintf("r%d", i)), resultType))
 	}
 
-	// return (0 | "" | false | nil | ...), ...
-	returnStatement := jen.Return().List(zeroValues...)
-	return jen.Func().Params(method.paramTypes...).Params(method.resultTypes...).Block(returnStatement)
+	// Note: an empty return here returns the zero valued variables r0, r1, ...
+	return jen.Func().Params(method.paramTypes...).Params(rt...).Block(jen.Return())
 }
 
 func generatePanickingFunction(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
