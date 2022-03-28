@@ -88,9 +88,11 @@ func generateConstructor(
 func generateNoopFunction(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
 	rt := make([]jen.Code, 0, len(method.resultTypes))
 	for i, resultType := range method.resultTypes {
+		// (r0 <typ1>, r1 <type2>, ...)
 		rt = append(rt, compose(jen.Id(fmt.Sprintf("r%d", i)), resultType))
 	}
 
+	// return r0, r1, ...
 	return jen.Func().Params(method.paramTypes...).Params(rt...).Block(jen.Return())
 }
 
