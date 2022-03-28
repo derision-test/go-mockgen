@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 	"github.com/dustin/go-humanize"
 )
 
@@ -27,12 +28,12 @@ func generateMockStruct(iface *wrappedInterface, outputImportPath string) jen.Co
 			method.Name,
 		)
 
-		hook := jen.Id(mockFuncFieldName).Op("*").Id(mockFuncStructName)
+		hook := compose(jen.Id(mockFuncFieldName).Op("*"), addTypes(jen.Id(mockFuncStructName), iface.TypeParams, false))
 		structFields = append(structFields, addComment(hook, 2, commentText))
 	}
 
 	// <Name>Func *<Prefix><InterfaceName><Name>Func, ...
-	return generateStruct(mockStructName, commentText, structFields)
+	return generateStruct(mockStructName, iface.TypeParams, commentText, structFields)
 }
 
 func generateMockFuncStruct(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
@@ -46,11 +47,11 @@ func generateMockFuncStruct(iface *wrappedInterface, method *wrappedMethod, outp
 		mockStructName,
 	)
 
-	return generateStruct(mockFuncStructName, commentText, []jen.Code{
-		compose(jen.Id("defaultHook"), method.signature),     // defaultHook <signature>
-		compose(jen.Id("hooks").Index(), method.signature),   // hooks []<signature>
-		jen.Id("history").Index().Id(mockFuncCallStructName), // history []<prefix>FuncCall
-		jen.Id("mutex").Qual("sync", "Mutex"),                // mutex sync.Mutex
+	return generateStruct(mockFuncStructName, iface.TypeParams, commentText, []jen.Code{
+		compose(jen.Id("defaultHook"), method.signature),                                                      // defaultHook <signature>
+		compose(jen.Id("hooks").Index(), method.signature),                                                    // hooks []<signature>
+		compose(jen.Id("history").Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false)), // history []<prefix>FuncCall
+		jen.Id("mutex").Qual("sync", "Mutex"),                                                                 // mutex sync.Mutex
 	})
 }
 
@@ -77,11 +78,11 @@ func generateMockFuncCallStruct(iface *wrappedInterface, method *wrappedMethod, 
 
 	argFields := makeFields("Arg", method.dotlessParamTypes, argFieldComment)    // Arg<n> <ParamType #n>, ...
 	resultFields := makeFields("Result", method.resultTypes, resultFieldComment) // Result<n> <ResultType #n>, ...
-	return generateStruct(mockFuncCallStructName, commentText, append(argFields, resultFields...))
+	return generateStruct(mockFuncCallStructName, iface.TypeParams, commentText, append(argFields, resultFields...))
 }
 
-func generateStruct(name string, commentText string, structFields []jen.Code) jen.Code {
-	typeDeclaration := jen.Type().Id(name).Struct(structFields...)
+func generateStruct(name string, typeParams []types.TypeParam, commentText string, structFields []jen.Code) jen.Code {
+	typeDeclaration := compose(addTypes(jen.Type().Id(name), typeParams, true), jen.Struct(structFields...))
 	return addComment(typeDeclaration, 1, commentText)
 }
 

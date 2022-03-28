@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	"github.com/dave/jennifer/jen"
+	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 )
 
 func generateMockStructConstructor(iface *wrappedInterface, outputImportPath string) jen.Code {
@@ -61,7 +62,7 @@ func generateMockStructFromConstructorCommon(iface *wrappedInterface, ifaceName 
 	}
 
 	// (i <InterfaceName>)
-	params := []jen.Code{compose(jen.Id("i"), ifaceName)}
+	params := []jen.Code{compose(jen.Id("i"), addTypes(ifaceName, iface.TypeParams, false))}
 	return generateConstructor(iface, strings.Join(commentText, " "), name, params, makeField)
 }
 
@@ -78,21 +79,19 @@ func generateConstructor(
 	}
 
 	// return &Mock<Name>{ <constructorField>, ... }
-	returnStatement := compose(jen.Return(), generateStructInitializer(iface.mockStructName, constructorFields...))
-	results := []jen.Code{jen.Op("*").Id(iface.mockStructName)}
-	functionDeclaration := jen.Func().Id(methodName).Params(params...).Params(results...).Block(returnStatement)
+	returnStatement := compose(jen.Return(), generateStructInitializer(iface.mockStructName, iface.TypeParams, constructorFields...))
+	results := []jen.Code{addTypes(jen.Op("*").Id(iface.mockStructName), iface.TypeParams, false)}
+	functionDeclaration := compose(addTypes(jen.Func().Id(methodName), iface.TypeParams, true), jen.Params(params...).Params(results...).Block(returnStatement))
 	return addComment(functionDeclaration, 1, commentText)
 }
 
 func generateNoopFunction(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
-	zeroValues := make([]jen.Code, 0, len(method.Results))
-	for _, typ := range method.Results {
-		zeroValues = append(zeroValues, generateZeroValue(typ, iface.ImportPath, outputImportPath))
+	rt := make([]jen.Code, 0, len(method.resultTypes))
+	for i, resultType := range method.resultTypes {
+		rt = append(rt, compose(jen.Id(fmt.Sprintf("r%d", i)), resultType))
 	}
 
-	// return (0 | "" | false | nil | ...), ...
-	returnStatement := jen.Return().List(zeroValues...)
-	return jen.Func().Params(method.paramTypes...).Params(method.resultTypes...).Block(returnStatement)
+	return jen.Func().Params(method.paramTypes...).Params(rt...).Block(jen.Return())
 }
 
 func generatePanickingFunction(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
@@ -121,7 +120,7 @@ func makeDefaultHookField(iface *wrappedInterface, method *wrappedMethod, functi
 	fieldName := fmt.Sprintf("%sFunc", method.Name)
 	structName := fmt.Sprintf("%s%s%sFunc", iface.prefix, iface.titleName, method.Name)
 
-	initializer := generateStructInitializer(structName, compose(
+	initializer := generateStructInitializer(structName, iface.TypeParams, compose(
 		jen.Id("defaultHook").Op(":"),
 		function,
 	))
@@ -130,9 +129,9 @@ func makeDefaultHookField(iface *wrappedInterface, method *wrappedMethod, functi
 	return compose(jen.Id(fieldName), jen.Op(":"), initializer)
 }
 
-func generateStructInitializer(structName string, fields ...jen.Code) jen.Code {
+func generateStructInitializer(structName string, typeParams []types.TypeParam, fields ...jen.Code) jen.Code {
 	// &<StructName>{ fields, ... }
-	return compose(jen.Op("&").Id(structName), jen.Values(padFields(fields)...))
+	return compose(addTypes(jen.Op("&").Id(structName), typeParams, false), jen.Values(padFields(fields)...))
 }
 
 func padFields(fields []jen.Code) []jen.Code {

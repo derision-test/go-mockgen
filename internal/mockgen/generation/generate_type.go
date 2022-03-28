@@ -9,7 +9,7 @@ import (
 
 type typeGenerator func(typ types.Type) *jen.Statement
 
-func generateType(typ types.Type, importPath, outputImportPath string, variadic bool) *jen.Statement {
+func generateType(typ types.Type, importPath, outputImportPath string, variadic bool) (out *jen.Statement) {
 	recur := func(typ types.Type) *jen.Statement {
 		return generateType(typ, importPath, outputImportPath, false)
 	}
@@ -35,6 +35,10 @@ func generateType(typ types.Type, importPath, outputImportPath string, variadic 
 		return generateSliceType(t, variadic, recur)
 	case *types.Struct:
 		return generateStructType(t, recur)
+	case *types.TypeParam:
+		return generateTypeParamType(t)
+	case *types.Union:
+		return generateUnionType(t, recur)
 
 	default:
 		panic(fmt.Sprintf("unsupported case: %#v\n", typ))
@@ -62,20 +66,38 @@ func generateChanType(t *types.Chan, generate typeGenerator) *jen.Statement {
 }
 
 func generateInterfaceType(t *types.Interface, generate typeGenerator) *jen.Statement {
+	embeds := make([]jen.Code, 0, t.NumEmbeddeds())
+	for i := 0; i < t.NumEmbeddeds(); i++ {
+		if typ := t.EmbeddedType(i); typ != nil {
+			embeds = append(embeds, compose(jen.Op("~"), generate(typ)))
+		}
+	}
+
 	methods := make([]jen.Code, 0, t.NumMethods())
 	for i := 0; i < t.NumMethods(); i++ {
 		methods = append(methods, compose(jen.Id(t.Method(i).Name()), generate(t.Method(i).Type())))
 	}
 
-	return jen.Interface(methods...)
+	return jen.Interface(append(embeds, methods...)...)
 }
 
 func generateMapType(t *types.Map, generate typeGenerator) *jen.Statement {
 	return compose(jen.Map(generate(t.Key())), generate(t.Elem()))
 }
 
-func generateNamedType(t *types.Named, importPath, outputImportPath string, _ typeGenerator) *jen.Statement {
-	return generateQualifiedName(t, importPath, outputImportPath)
+func generateNamedType(t *types.Named, importPath, outputImportPath string, generate typeGenerator) *jen.Statement {
+	name := generateQualifiedName(t, importPath, outputImportPath)
+
+	if typeArgs := t.TypeArgs(); typeArgs != nil {
+		typeArguments := make([]jen.Code, 0, typeArgs.Len())
+		for i := 0; i < typeArgs.Len(); i++ {
+			typeArguments = append(typeArguments, generate(typeArgs.At(i)))
+		}
+
+		name = name.Types(typeArguments...)
+	}
+
+	return name
 }
 
 func generatePointerType(t *types.Pointer, generate typeGenerator) *jen.Statement {
@@ -111,4 +133,17 @@ func generateStructType(t *types.Struct, generate typeGenerator) *jen.Statement 
 	}
 
 	return jen.Struct(fields...)
+}
+
+func generateTypeParamType(t *types.TypeParam) *jen.Statement {
+	return jen.Id(t.String())
+}
+
+func generateUnionType(t *types.Union, generate typeGenerator) *jen.Statement {
+	types := make([]jen.Code, 0, t.Len())
+	for i := 0; i < t.Len(); i++ {
+		types = append(types, generate(t.Term(i).Type()))
+	}
+
+	return jen.Union(types...)
 }
