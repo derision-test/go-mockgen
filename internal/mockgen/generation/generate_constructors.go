@@ -92,7 +92,7 @@ func generateNoopFunction(iface *wrappedInterface, method *wrappedMethod, output
 		rt = append(rt, compose(jen.Id(fmt.Sprintf("r%d", i)), resultType))
 	}
 
-	// return r0, r1, ...
+	// Note: an empty return here returns the zero valued variables r0, r1, ...
 	return jen.Func().Params(method.paramTypes...).Params(rt...).Block(jen.Return())
 }
 
