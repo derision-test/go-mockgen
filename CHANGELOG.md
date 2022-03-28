@@ -29,7 +29,7 @@ No significant changes (only corrected version output).
 
 No significant changes (only corrected version output).
 
-## [v1.1.0] - 2021-06-14
+## [v1.0.0] - 2021-06-14
 
 ### Added
 
