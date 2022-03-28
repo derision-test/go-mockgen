@@ -27,7 +27,9 @@ No significant changes (only corrected version output).
 
 ## [v1.1.1] - 2021-06-14
 
-No significant changes (only corrected version output).
+### Added
+
+- Added `--goimports` flag. [0f4ed82](https://github.com/derision-test/go-mockgen/commit/0f4ed82247eff5446b885c3ea48f48b870a9ee4a)
 
 ## [v1.0.0] - 2021-06-14
 
