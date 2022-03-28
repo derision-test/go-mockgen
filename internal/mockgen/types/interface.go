@@ -1,6 +1,7 @@
 package types
 
 import (
+	"go/ast"
 	"go/types"
 	"sort"
 )
@@ -8,13 +9,19 @@ import (
 type Interface struct {
 	Name       string
 	ImportPath string
+	TypeParams []TypeParam
 	Methods    []*Method
 }
 
-func newInterfaceFromTypeSpec(name, importPath string, typeSpec *types.Interface) *Interface {
-	methodMap := make(map[string]*Method, typeSpec.NumMethods())
-	for i := 0; i < typeSpec.NumMethods(); i++ {
-		method := typeSpec.Method(i)
+type TypeParam struct {
+	Name string
+	Type types.Type
+}
+
+func newInterfaceFromTypeSpec(name, importPath string, typeSpec *ast.TypeSpec, underlyingType *types.Interface, ps *types.TypeParamList) *Interface {
+	methodMap := make(map[string]*Method, underlyingType.NumMethods())
+	for i := 0; i < underlyingType.NumMethods(); i++ {
+		method := underlyingType.Method(i)
 		name := method.Name()
 		methodMap[name] = newMethodFromSignature(name, method.Type().(*types.Signature))
 	}
@@ -30,9 +37,19 @@ func newInterfaceFromTypeSpec(name, importPath string, typeSpec *types.Interface
 		methods = append(methods, methodMap[name])
 	}
 
+	var typeParams []TypeParam
+	if typeSpec.TypeParams != nil && ps != nil {
+		for i, field := range typeSpec.TypeParams.List {
+			for _, name := range field.Names {
+				typeParams = append(typeParams, TypeParam{Name: name.Name, Type: ps.At(i).Constraint()})
+			}
+		}
+	}
+
 	return &Interface{
 		Name:       name,
 		ImportPath: importPath,
+		TypeParams: typeParams,
 		Methods:    methods,
 	}
 }

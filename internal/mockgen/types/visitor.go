@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 )
@@ -32,7 +33,19 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 
 				switch t := obj.Type().Underlying().(type) {
 				case *types.Interface:
-					v.types[name] = newInterfaceFromTypeSpec(name, v.importPath, t)
+					namedType, ok := obj.Type().(*types.Named)
+					if !ok {
+						panic(fmt.Sprintf("Unexpected type %T: expected *types.Named", obj.Type()))
+					}
+
+					if !t.IsMethodSet() {
+						// Contains type constraints - we generate illegal code in this circumstance.
+						// I'm not sure it makes sense to support this case, but we can revisit if we
+						// get a feature request in the future or run into a case in the wild.
+						continue
+					}
+
+					v.types[name] = newInterfaceFromTypeSpec(name, v.importPath, typeSpec, t, namedType.TypeParams())
 				}
 			}
 		}

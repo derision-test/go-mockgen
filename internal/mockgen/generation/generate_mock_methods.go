@@ -35,7 +35,7 @@ func generateMockInterfaceMethod(iface *wrappedInterface, method *wrappedMethod,
 
 	functionExpression := jen.Id("m").Dot(mockFuncFieldName).Dot("nextHook").Call()
 	callStatement := functionExpression.Call(argumentExpressions...)
-	callInstanceExpression := jen.Id(mockFuncCallStructName).Values(append(paramNames, resultNames...)...)
+	callInstanceExpression := compose(addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false), jen.Values(append(paramNames, resultNames...)...))
 	appendFuncCall := jen.Id("m").Dot(mockFuncFieldName).Dot("appendCall").Call(callInstanceExpression)
 	returnStatement := jen.Return()
 
@@ -70,7 +70,7 @@ func generateMockMethod(
 		params = append(params, compose(jen.Id(fmt.Sprintf("v%d", i)), param))
 	}
 
-	receiver := jen.Id("m").Op("*").Id(iface.mockStructName)
+	receiver := compose(jen.Id("m").Op("*"), addTypes(jen.Id(iface.mockStructName), iface.TypeParams, false))
 	methodDeclaration := jen.Func().Params(receiver).Id(method.Name).Params(params...).Params(method.resultTypes...).Block(body...)
 	return addComment(methodDeclaration, 1, commentText)
 }

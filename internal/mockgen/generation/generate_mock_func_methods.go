@@ -101,7 +101,7 @@ func generateMockFuncAppendCallMethod(iface *wrappedInterface, method *wrappedMe
 	unlockStatement := jen.Id("f").Dot("mutex").Dot("Unlock").Call()
 	appendStatement := selfAppend(jen.Id("f").Dot("history"), jen.Id("r0"))
 
-	params := []jen.Code{compose(jen.Id("r0"), jen.Id(mockFuncCallStructName))}
+	params := []jen.Code{compose(jen.Id("r0"), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))}
 	return generateMockFuncMethod(iface, method, "appendCall", "", params, nil,
 		lockStatement,   // f.mutex.Lock()
 		appendStatement, // f.history = append(f.history, r0)
@@ -118,13 +118,13 @@ func generateMockFuncHistoryMethod(iface *wrappedInterface, method *wrappedMetho
 
 	lockStatement := jen.Id("f").Dot("mutex").Dot("Lock").Call()
 	unlockStatement := jen.Id("f").Dot("mutex").Dot("Unlock").Call()
-	callStructSliceType := jen.Index().Id(mockFuncCallStructName)
+	callStructSliceType := compose(jen.Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))
 	lenHistoryExpression := jen.Len(jen.Id("f").Dot("history"))
 	makeSliceStatement := jen.Id("history").Op(":=").Make(callStructSliceType, lenHistoryExpression)
 	copyStatement := jen.Copy(jen.Id("history"), jen.Id("f").Dot("history"))
 	returnStatement := jen.Return().Id("history")
 
-	results := []jen.Code{jen.Index().Id(mockFuncCallStructName)}
+	results := []jen.Code{compose(jen.Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))}
 	return generateMockFuncMethod(iface, method, "History", commentText, nil, results,
 		lockStatement,               // f.mutex.Lock()
 		makeSliceStatement,          // history := make([]<callStructName>, len(f.history))
@@ -143,7 +143,7 @@ func generateMockFuncMethod(
 	body ...jen.Code,
 ) jen.Code {
 	mockFuncStructName := fmt.Sprintf("%s%s%sFunc", iface.prefix, iface.titleName, method.Name)
-	receiver := jen.Id("f").Op("*").Id(mockFuncStructName)
+	receiver := compose(jen.Id("f").Op("*"), addTypes(jen.Id(mockFuncStructName), iface.TypeParams, false))
 	methodDeclaration := jen.Func().Params(receiver).Id(methodName).Params(params...).Params(results...).Block(body...)
 	return addComment(methodDeclaration, 1, commentText)
 }
