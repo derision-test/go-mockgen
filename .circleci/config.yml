@@ -11,7 +11,7 @@ jobs:
     executor: go
     steps:
       - checkout
-      - run: go get github.com/mattn/goveralls
+      - run: go install github.com/mattn/goveralls
       - run:
           name: Run tests
           command: |
