@@ -5,6 +5,7 @@
 ### Changed
 
 - Updated x/tools for Go 1.18 support. [#22](https://github.com/derision-test/go-mockgen/pull/22)
+- Fixed generation of code with inline interface definitions. [#23](https://github.com/derision-test/go-mockgen/pull/23)
 
 ## [v1.1.4] - 2022-02-01
 
