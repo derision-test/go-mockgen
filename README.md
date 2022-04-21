@@ -90,6 +90,8 @@ func TestCache(t *testing.T) {
 }
 ```
 
+Note that this "panic by default" behavior is given automatically when using the `NewStrictMockCache` constructor, also automatically generated for all mocks.
+
 ### Assertions
 
 Mocks track their invocations and can be retrieved via the `History` method. Structs are generated for each method type containing fields for each argument and result type. Raw assertions can be performed on these values.
