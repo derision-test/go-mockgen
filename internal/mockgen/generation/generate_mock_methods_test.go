@@ -8,7 +8,8 @@ import (
 )
 
 func TestGenerateMockInterfaceMethod(t *testing.T) {
-	code := generateMockInterfaceMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockInterfaceMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// Do delegates to the next hook function in the queue and stores the
 		// parameter and result values of this invocation.
@@ -22,7 +23,8 @@ func TestGenerateMockInterfaceMethod(t *testing.T) {
 }
 
 func TestGenerateMockInterfaceMethodVariadic(t *testing.T) {
-	code := generateMockInterfaceMethod(makeMethod(TestMethodDof))
+	wrappedInterface := makeInterface(TestMethodDof)
+	code := generateMockInterfaceMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// Dof delegates to the next hook function in the queue and stores the
 		// parameter and result values of this invocation.

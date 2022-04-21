@@ -8,7 +8,7 @@ import (
 )
 
 func TestGenerateMockStruct(t *testing.T) {
-	code := generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	code := generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof), "")
 	expected := strip(`
 		// MockTestClient is a mock implementation of the Client interface (from the
 		// package github.com/derision-test/go-mockgen/test) used for unit testing.
@@ -28,7 +28,8 @@ func TestGenerateMockStruct(t *testing.T) {
 }
 
 func TestGenerateFuncStruct(t *testing.T) {
-	code := generateMockFuncStruct(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncStruct(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// TestClientDoFunc describes the behavior when the Do method of the parent
 		// MockTestClient instance is invoked.
@@ -43,7 +44,8 @@ func TestGenerateFuncStruct(t *testing.T) {
 }
 
 func TestGenerateFuncStructVariadic(t *testing.T) {
-	code := generateMockFuncStruct(makeMethod(TestMethodDof))
+	wrappedInterface := makeInterface(TestMethodDof)
+	code := generateMockFuncStruct(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// TestClientDofFunc describes the behavior when the Dof method of the
 		// parent MockTestClient instance is invoked.
@@ -58,7 +60,8 @@ func TestGenerateFuncStructVariadic(t *testing.T) {
 }
 
 func TestGenerateMockFuncCallStruct(t *testing.T) {
-	code := generateMockFuncCallStruct(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncCallStruct(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// TestClientDoFuncCall is an object that describes an invocation of method
 		// Do on an instance of MockTestClient.
@@ -75,7 +78,8 @@ func TestGenerateMockFuncCallStruct(t *testing.T) {
 }
 
 func TestGenerateMockFuncCallStructVariadic(t *testing.T) {
-	code := generateMockFuncCallStruct(makeMethod(TestMethodDof))
+	wrappedInterface := makeInterface(TestMethodDof)
+	code := generateMockFuncCallStruct(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// TestClientDofFuncCall is an object that describes an invocation of method
 		// Dof on an instance of MockTestClient.

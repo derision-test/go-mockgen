@@ -8,7 +8,8 @@ import (
 )
 
 func TestGenerateMockFuncSetHookMethod(t *testing.T) {
-	code := generateMockFuncSetHookMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncSetHookMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// SetDefaultHook sets function that is called when the Do method of the
 		// parent MockTestClient instance is invoked and the hook queue is empty.
@@ -20,7 +21,8 @@ func TestGenerateMockFuncSetHookMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncSetHookMethodVariadic(t *testing.T) {
-	code := generateMockFuncSetHookMethod(makeMethod(TestMethodDof))
+	wrappedInterface := makeInterface(TestMethodDof)
+	code := generateMockFuncSetHookMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// SetDefaultHook sets function that is called when the Dof method of the
 		// parent MockTestClient instance is invoked and the hook queue is empty.
@@ -32,7 +34,8 @@ func TestGenerateMockFuncSetHookMethodVariadic(t *testing.T) {
 }
 
 func TestGenerateMockFuncPushHookMethod(t *testing.T) {
-	code := generateMockFuncPushHookMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncPushHookMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// PushHook adds a function to the end of hook queue. Each invocation of the
 		// Do method of the parent MockTestClient instance invokes the hook at the
@@ -48,7 +51,8 @@ func TestGenerateMockFuncPushHookMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncPushHookMethodVariadic(t *testing.T) {
-	code := generateMockFuncPushHookMethod(makeMethod(TestMethodDof))
+	wrappedInterface := makeInterface(TestMethodDof)
+	code := generateMockFuncPushHookMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// PushHook adds a function to the end of hook queue. Each invocation of the
 		// Dof method of the parent MockTestClient instance invokes the hook at the
@@ -64,7 +68,8 @@ func TestGenerateMockFuncPushHookMethodVariadic(t *testing.T) {
 }
 
 func TestGenerateMockFuncSetReturnMethod(t *testing.T) {
-	code := generateMockFuncSetReturnMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncSetReturnMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// SetDefaultReturn calls SetDefaultHook with a function that returns the
 		// given values.
@@ -78,7 +83,8 @@ func TestGenerateMockFuncSetReturnMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncPushReturnMethod(t *testing.T) {
-	code := generateMockFuncPushReturnMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncPushReturnMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// PushReturn calls PushHook with a function that returns the given values.
 		func (f *TestClientDoFunc) PushReturn(r0 bool) {
@@ -91,7 +97,8 @@ func TestGenerateMockFuncPushReturnMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncNextHookMethod(t *testing.T) {
-	code := generateMockFuncNextHookMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncNextHookMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		func (f *TestClientDoFunc) nextHook() func(string) bool {
 			f.mutex.Lock()
@@ -110,7 +117,8 @@ func TestGenerateMockFuncNextHookMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncAppendCallMethod(t *testing.T) {
-	code := generateMockFuncAppendCallMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncAppendCallMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		func (f *TestClientDoFunc) appendCall(r0 TestClientDoFuncCall) {
 			f.mutex.Lock()
@@ -122,7 +130,8 @@ func TestGenerateMockFuncAppendCallMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncHistoryMethod(t *testing.T) {
-	code := generateMockFuncHistoryMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncHistoryMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// History returns a sequence of TestClientDoFuncCall objects describing the
 		// invocations of this function.
