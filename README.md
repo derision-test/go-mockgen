@@ -131,8 +131,8 @@ These methods can be used as follows.
 // cache.Get called 3 times
 mockassert.CalledN(t, cache.GetFunc, 3)
 
-// Ensure cache.Set("foo", "bar") was called
-mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", "bar"))
+// Ensure cache.Set("foo", 42) was called
+mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", 42))
 
 // Ensure cache.Set("foo", _) was called
 mockassert.CalledWith(cache.SetFunc, mockassert.Values("foo", mockassert.Skip))
