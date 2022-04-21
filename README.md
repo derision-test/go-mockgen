@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/badge/github.com/derision-test/go-mockgen.svg)](https://pkg.go.dev/github.com/derision-test/go-mockgen) [![CircleCI status](https://circleci.com/gh/derision-test/go-mockgen.svg?style=svg)](https://circleci.com/gh/derision-test/go-mockgen) [![Coverage status](https://coveralls.io/repos/github/derision-test/go-mockgen/badge.svg?branch=master)](https://coveralls.io/github/derision-test/go-mockgen?branch=master) ![Sonarcloud bugs count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=bugs) ![Sonarcloud vulnerabilities count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=vulnerabilities) ![Sonarcloud maintainability rating](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=sqale_rating) ![Sonarcloud code smells count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=code_smells)
 
-A mock interface code generator.
+A mock interface code generator (supports generics as of v1.2.0 🎉).
 
 ## Generating Mocks
 
