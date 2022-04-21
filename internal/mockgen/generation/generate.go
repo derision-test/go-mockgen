@@ -25,6 +25,7 @@ type Options struct {
 	OutputDir         string
 	OutputImportPath  string
 	Prefix            string
+	ConstructorPrefix string
 	Force             bool
 	DisableFormatting bool
 	GoImportsBinary   string
