@@ -93,3 +93,12 @@ func TestGomegaPushReturn(t *testing.T) {
 	Expect(parent.GetChildren()).To(HaveLen(3))
 	Expect(parent.GetChildren()).To(HaveLen(0))
 }
+
+func TestGomegaGenerics(t *testing.T) {
+	RegisterTestingT(t)
+
+	mock := mocks.NewMockI2[string, int]()
+	mock.M2Func.SetDefaultReturn(42)
+	Expect(mock.M2("foo")).To(Equal(42))
+	Expect(mock.M2Func).To(BeCalledOnceWith("foo"))
+}

@@ -87,3 +87,10 @@ func TestTestifyPushReturn(t *testing.T) {
 	assert.Len(t, parent.GetChildren(), 3)
 	assert.Len(t, parent.GetChildren(), 0)
 }
+
+func TestTestifyGenerics(t *testing.T) {
+	mock := mocks.NewMockI2[string, int]()
+	mock.M2Func.SetDefaultReturn(42)
+	assert.Equal(t, 42, mock.M2("foo"))
+	mockassert.CalledOnceWith(t, mock.M2Func, mockassert.Values("foo"))
+}
