@@ -13,7 +13,7 @@ Mocks should be generated via `go generate` and should be regenerated on each up
 ```go
 package mocks
 
-//go:generate go-mockgen -f github.com/example/package -i ExampleInterface -o mock_example_interface_test.go
+//go:generate go-mockgen -f github.com/cache/user/pkg -i Cache -o mock_cache_test.go
 ```
 
 Depending on how you prefer to structure your code, you can either
@@ -46,8 +46,8 @@ A hook is a method that is called on each invocation and allows the test to spec
 
 ```go
 func TestCache(t *testing.T) {
-    cache := mocks.NewMockCache()
-    cache.GetFunc.SetDefaultHook(func (key string) (interface{}, bool) {
+    cache := mocks.NewMockCache[string, int]()
+    cache.GetFunc.SetDefaultHook(func (key string) (int, bool) {
         if key == "expected" {
             return 42, true
         }
@@ -63,7 +63,7 @@ In the cases where you don't need specific behaviors but just need to return som
 
 ```go
 func TestCache(t *testing.T) {
-    cache := mocks.NewMockCache()
+    cache := mocks.NewMockCache[string, int]()
     cache.GetFunc.SetDefaultReturn(42, true)
 
     testSubject := NewThingThatNeedsCache(cache)
@@ -77,8 +77,8 @@ The following example will test a cache that returns values 50, 51, and 52 in se
 
 ```go
 func TestCache(t *testing.T) {
-    cache := mocks.NewMockCache()
-    cache.GetFunc.SetDefaultHook(func (key string) (interface{}, bool) {
+    cache := mocks.NewMockCache[string, int]()
+    cache.GetFunc.SetDefaultHook(func (key string) (int, bool) {
         panic("unexpected call")
     })
     cache.GetFunc.PushReturn(50, true)
@@ -96,9 +96,9 @@ Mocks track their invocations and can be retrieved via the `History` method. Str
 
 ```go
 allCalls := cache.GetFunc.History()
-allCalls[0].Arg0 // key
-allCalls[0].Result0 // value
-allCalls[0].Result1 // exists flag
+allCalls[0].Arg0 // key (type string)
+allCalls[0].Result0 // value (type int)
+allCalls[0].Result1 // exists flag (type bool)
 ```
 
 ### Testify integration
