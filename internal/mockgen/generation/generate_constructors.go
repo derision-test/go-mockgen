@@ -9,12 +9,12 @@ import (
 	"github.com/derision-test/go-mockgen/internal/mockgen/types"
 )
 
-func generateMockStructConstructor(iface *wrappedInterface, outputImportPath string) jen.Code {
+func generateMockStructConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	makeField := func(method *wrappedMethod) jen.Code {
 		return makeDefaultHookField(iface, method, generateNoopFunction(iface, method, outputImportPath))
 	}
 
-	name := fmt.Sprintf("New%s", iface.mockStructName)
+	name := fmt.Sprintf("New%s%s", constructorPrefix, iface.mockStructName)
 	commentText := []string{
 		fmt.Sprintf(`%s creates a new mock of the %s interface.`, name, iface.Name),
 		`All methods return zero values for all results, unless overwritten.`,
@@ -22,12 +22,12 @@ func generateMockStructConstructor(iface *wrappedInterface, outputImportPath str
 	return generateConstructor(iface, strings.Join(commentText, " "), name, nil, makeField)
 }
 
-func generateMockStructStrictConstructor(iface *wrappedInterface, outputImportPath string) jen.Code {
+func generateMockStructStrictConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	makeField := func(method *wrappedMethod) jen.Code {
 		return makeDefaultHookField(iface, method, generatePanickingFunction(iface, method, outputImportPath))
 	}
 
-	name := fmt.Sprintf("NewStrict%s", iface.mockStructName)
+	name := fmt.Sprintf("NewStrict%s%s", constructorPrefix, iface.mockStructName)
 	commentText := []string{
 		fmt.Sprintf(`%s creates a new mock of the %s interface.`, name, iface.Name),
 		`All methods panic on invocation, unless overwritten.`,
@@ -35,27 +35,27 @@ func generateMockStructStrictConstructor(iface *wrappedInterface, outputImportPa
 	return generateConstructor(iface, strings.Join(commentText, " "), name, nil, makeField)
 }
 
-func generateMockStructFromConstructor(iface *wrappedInterface, outputImportPath string) jen.Code {
+func generateMockStructFromConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	if !unicode.IsUpper([]rune(iface.Name)[0]) {
 		surrogateStructName := fmt.Sprintf("surrogateMock%s", iface.titleName)
 		surrogateDefinition := generateSurrogateInterface(iface, surrogateStructName)
 		name := jen.Id(surrogateStructName)
-		constructor := generateMockStructFromConstructorCommon(iface, name)
+		constructor := generateMockStructFromConstructorCommon(iface, name, constructorPrefix)
 		return compose(surrogateDefinition, constructor)
 	}
 
 	importPath := sanitizeImportPath(iface.ImportPath, outputImportPath)
 	name := jen.Qual(importPath, iface.Name)
-	return generateMockStructFromConstructorCommon(iface, name)
+	return generateMockStructFromConstructorCommon(iface, name, constructorPrefix)
 }
 
-func generateMockStructFromConstructorCommon(iface *wrappedInterface, ifaceName *jen.Statement) jen.Code {
+func generateMockStructFromConstructorCommon(iface *wrappedInterface, ifaceName *jen.Statement, constructorPrefix string) jen.Code {
 	makeField := func(method *wrappedMethod) jen.Code {
 		// i.<MethodName>
 		return makeDefaultHookField(iface, method, jen.Id("i").Dot(method.Name))
 	}
 
-	name := fmt.Sprintf("New%sFrom", iface.mockStructName)
+	name := fmt.Sprintf("New%s%sFrom", constructorPrefix, iface.mockStructName)
 	commentText := []string{
 		fmt.Sprintf(`%s creates a new mock of the %s interface.`, name, iface.mockStructName),
 		`All methods delegate to the given implementation, unless overwritten.`,

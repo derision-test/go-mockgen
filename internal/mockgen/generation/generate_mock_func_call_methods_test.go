@@ -8,7 +8,8 @@ import (
 )
 
 func TestGenerateMockFuncCallArgsMethod(t *testing.T) {
-	code := generateMockFuncCallArgsMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncCallArgsMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// Args returns an interface slice containing the arguments of this
 		// invocation.
@@ -20,7 +21,8 @@ func TestGenerateMockFuncCallArgsMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncCallArgsMethodVariadic(t *testing.T) {
-	code := generateMockFuncCallArgsMethod(makeMethod(TestMethodDof))
+	wrappedInterface := makeInterface(TestMethodDof)
+	code := generateMockFuncCallArgsMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// Args returns an interface slice containing the arguments of this
 		// invocation. The variadic slice argument is flattened in this array such
@@ -39,7 +41,8 @@ func TestGenerateMockFuncCallArgsMethodVariadic(t *testing.T) {
 }
 
 func TestGenerateMockFuncCallResultsMethod(t *testing.T) {
-	code := generateMockFuncCallResultsMethod(makeMethod(TestMethodDo))
+	wrappedInterface := makeInterface(TestMethodDo)
+	code := generateMockFuncCallResultsMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// Results returns an interface slice containing the results of this
 		// invocation.
@@ -51,7 +54,8 @@ func TestGenerateMockFuncCallResultsMethod(t *testing.T) {
 }
 
 func TestGenerateMockFuncCallResultsMethodMultiple(t *testing.T) {
-	code := generateMockFuncCallResultsMethod(makeMethod(TestMethodStatus))
+	wrappedInterface := makeInterface(TestMethodStatus)
+	code := generateMockFuncCallResultsMethod(wrappedInterface, wrappedInterface.wrappedMethods[0], "")
 	expected := strip(`
 		// Results returns an interface slice containing the results of this
 		// invocation.

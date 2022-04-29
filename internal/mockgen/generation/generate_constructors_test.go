@@ -8,7 +8,7 @@ import (
 )
 
 func TestGenerateMockStructConstructor(t *testing.T) {
-	code := generateMockStructConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	code := generateMockStructConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof), "", "")
 	expected := strip(`
 		// NewMockTestClient creates a new mock of the Client interface. All methods
 		// return zero values for all results, unless overwritten.
@@ -36,7 +36,7 @@ func TestGenerateMockStructConstructor(t *testing.T) {
 }
 
 func TestGenerateMockStructStrictConstructor(t *testing.T) {
-	code := generateMockStructStrictConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	code := generateMockStructStrictConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof), "", "")
 	expected := strip(`
 		// NewStrictMockTestClient creates a new mock of the Client interface. All
 		// methods panic on invocation, unless overwritten.
@@ -64,7 +64,7 @@ func TestGenerateMockStructStrictConstructor(t *testing.T) {
 }
 
 func TestGenerateMockStructFromConstructor(t *testing.T) {
-	code := generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof))
+	code := generateMockStructFromConstructor(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof), "", "")
 	expected := strip(`
 		// NewMockTestClientFrom creates a new mock of the MockTestClient interface.
 		// All methods delegate to the given implementation, unless overwritten.
@@ -88,7 +88,7 @@ func TestGenerateMockStructFromConstructor(t *testing.T) {
 func TestGenerateMockStructFromConstructorUnexported(t *testing.T) {
 	iface := makeBareInterface(TestMethodStatus, TestMethodDo, TestMethodDof)
 	iface.Name = "client"
-	code := generateMockStructFromConstructor(wrapInterface(iface, TestPrefix, TestTitleName, TestMockStructName, ""), "")
+	code := generateMockStructFromConstructor(wrapInterface(iface, TestPrefix, TestTitleName, TestMockStructName, ""), "", "")
 
 	expected := strip(`
 		// surrogateMockClient is a copy of the client interface (from the package

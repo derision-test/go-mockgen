@@ -31,6 +31,7 @@ func parseArgs() (*generation.Options, error) {
 	app.Flag("filename", "The target output file. All mocks are written to this file.").Short('o').StringVar(&opts.OutputFilename)
 	app.Flag("import-path", "The import path of the generated package. It will be inferred from the target directory by default.").StringVar(&opts.PkgName)
 	app.Flag("prefix", "A prefix used in the name of each mock struct. Should be TitleCase by convention.").StringVar(&opts.Prefix)
+	app.Flag("constructor-prefix", "A prefix used in the name of each mock constructor function (after the initial `New`/`NewStrict` prefixes). Should be TitleCase by convention.").StringVar(&opts.ConstructorPrefix)
 	app.Flag("force", "Do not abort if a write to disk would overwrite an existing file.").Short('f').BoolVar(&opts.Force)
 	app.Flag("disable-formatting", "Do not run goimports over the rendered files.").BoolVar(&opts.DisableFormatting)
 	app.Flag("goimports", "Path to the goimports binary.").Default("goimports").StringVar(&opts.GoImportsBinary)
@@ -118,6 +119,10 @@ func validateOptions(opts *generation.Options) (bool, error) {
 
 	if opts.Prefix != "" && !goIdentifierPattern.Match([]byte(opts.Prefix)) {
 		return false, fmt.Errorf("prefix `%s` is illegal", opts.Prefix)
+	}
+
+	if opts.ConstructorPrefix != "" && !goIdentifierPattern.Match([]byte(opts.ConstructorPrefix)) {
+		return false, fmt.Errorf("constructor-`prefix `%s` is illegal", opts.ConstructorPrefix)
 	}
 
 	return false, nil

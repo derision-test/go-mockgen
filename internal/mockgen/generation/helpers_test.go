@@ -51,13 +51,13 @@ func makeBareInterface(methods ...*types.Method) *types.Interface {
 	}
 }
 
-func makeInterface(methods ...*types.Method) (*wrappedInterface, string) {
-	return wrapInterface(makeBareInterface(methods...), TestPrefix, TestTitleName, TestMockStructName, ""), ""
+func makeInterface(methods ...*types.Method) *wrappedInterface {
+	return wrapInterface(makeBareInterface(methods...), TestPrefix, TestTitleName, TestMockStructName, "")
 }
 
-func makeMethod(methods ...*types.Method) (*wrappedInterface, *wrappedMethod, string) {
-	wrapped, _ := makeInterface(methods...)
-	return wrapped, wrapped.wrappedMethods[0], ""
+func makeMethod(methods ...*types.Method) (*wrappedInterface, *wrappedMethod) {
+	wrapped := makeInterface(methods...)
+	return wrapped, wrapped.wrappedMethods[0]
 }
 
 func strip(block string) string {

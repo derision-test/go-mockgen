@@ -42,7 +42,7 @@ func TestGenerateInterface(t *testing.T) {
 
 	file := jen.NewFile("test")
 
-	generateInterface(file, makeBareInterface(TestMethodDo, TestMethodDof), TestPrefix, "")
+	generateInterface(file, makeBareInterface(TestMethodDo, TestMethodDof), TestPrefix, "", "")
 	rendered := fmt.Sprintf("%#v\n", file)
 
 	for _, decl := range expectedDecls {
