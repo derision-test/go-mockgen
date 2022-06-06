@@ -44,15 +44,12 @@ The following flags are defined by the binary.
 A configuration file is also supported. If no command line arguments are supplied, then the file `mockgen.yaml` in the current directory is used for input. The structure of the configuration file is as follows (where each entry in the `mocks` list can supply a value for each flag described above):
 
 ```yaml
+force: true
 mocks:
-- filename: enterprise/cmd/frontend/internal/app/mock_github_client_test.go
+  - path: github.com/cache/user/pkg
     interfaces:
-      - githubClient
-    path: github.com/sourcegraph/sourcegraph/enterprise/cmd/frontend/internal/app
-  - filename: enterprise/cmd/frontend/internal/codeintel/httpapi/mock_iface_test.go
-    interfaces:
-      - DBStore
-      - GitHubClient
+      - Cache
+    filename: foo/bar/mock_cache_test.go
 ```
 
 The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for prefixes and goimports will apply to each mock generator entry if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
