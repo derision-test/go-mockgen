@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- Added support for a manifest file configuration. [#XX](https://github.com/derision-test/go-mockgen/pull/XX)
 
 ## [v1.2.0] - 2022-03-28
 
