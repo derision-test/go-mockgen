@@ -12,9 +12,49 @@ import (
 	"github.com/derision-test/go-mockgen/internal/mockgen/consts"
 	"github.com/derision-test/go-mockgen/internal/mockgen/generation"
 	"github.com/derision-test/go-mockgen/internal/mockgen/paths"
+	"gopkg.in/yaml.v3"
 )
 
-func parseArgs() (*generation.Options, error) {
+func parseAndValidateOptions() ([]*generation.Options, error) {
+	allOptions, err := parseOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	validators := []func(opts *generation.Options) (bool, error){
+		validateOutputPaths,
+		validateOptions,
+	}
+
+	for _, opts := range allOptions {
+		for _, f := range validators {
+			if fatal, err := f(opts); err != nil {
+				if !fatal {
+					kingpin.Fatalf("%s, try --help", err.Error())
+				}
+
+				return nil, err
+			}
+		}
+	}
+
+	return allOptions, nil
+}
+
+func parseOptions() ([]*generation.Options, error) {
+	if len(os.Args) == 1 {
+		return parseManifest()
+	}
+
+	opts, err := parseFlags()
+	if err != nil {
+		return nil, err
+	}
+
+	return []*generation.Options{opts}, nil
+}
+
+func parseFlags() (*generation.Options, error) {
 	opts := &generation.Options{
 		ImportPaths: []string{},
 		Interfaces:  []string{},
@@ -41,22 +81,96 @@ func parseArgs() (*generation.Options, error) {
 		return nil, err
 	}
 
-	validators := []func(opts *generation.Options) (bool, error){
-		validateOutputPaths,
-		validateOptions,
-	}
-
-	for _, f := range validators {
-		if fatal, err := f(opts); err != nil {
-			if !fatal {
-				kingpin.Fatalf("%s, try --help", err.Error())
-			}
-
-			return nil, err
-		}
-	}
-
 	return opts, nil
+}
+
+func parseManifest() ([]*generation.Options, error) {
+	contents, err := os.ReadFile("mockgen.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	var payload struct {
+		// Global options
+		Exclude           []string `yaml:"exclude"`
+		Prefix            string   `yaml:"prefix"`
+		ConstructorPrefix string   `yaml:"constructor-prefix"`
+		Force             bool     `yaml:"force"`
+		DisableFormatting bool     `yaml:"disable-formatting"`
+		Goimports         string   `yaml:"goimports"`
+		ForTest           bool     `yaml:"for-test"`
+
+		Mocks []struct {
+			Path              string   `yaml:"path"`
+			Paths             []string `yaml:"paths"`
+			Package           string   `yaml:"package"`
+			Interfaces        []string `yaml:"interfaces"`
+			Exclude           []string `yaml:"exclude"`
+			Dirname           string   `yaml:"dirname"`
+			Filename          string   `yaml:"filename"`
+			ImportPath        string   `yaml:"import-path"`
+			Prefix            string   `yaml:"prefix"`
+			ConstructorPrefix string   `yaml:"constructor-prefix"`
+			Force             bool     `yaml:"force"`
+			DisableFormatting bool     `yaml:"disable-formatting"`
+			Goimports         string   `yaml:"goimports"`
+			ForTest           bool     `yaml:"for-test"`
+		} `yaml:"mocks"`
+	}
+	if err := yaml.Unmarshal(contents, &payload); err != nil {
+		return nil, err
+	}
+
+	optss := make([]*generation.Options, 0, len(payload.Mocks))
+	for _, opts := range payload.Mocks {
+		paths := opts.Paths
+		if opts.Path != "" {
+			paths = append(paths, opts.Path)
+		}
+		if opts.Goimports == "" {
+			opts.Goimports = "goimports"
+		}
+
+		opts.Exclude = append(opts.Exclude, payload.Exclude...)
+
+		if opts.Prefix == "" {
+			opts.Prefix = payload.Prefix
+		}
+		if opts.ConstructorPrefix == "" {
+			opts.ConstructorPrefix = payload.ConstructorPrefix
+		}
+		if opts.Goimports == "" {
+			opts.Goimports = payload.Goimports
+		}
+
+		if payload.Force {
+			opts.Force = true
+		}
+		if payload.DisableFormatting {
+			opts.DisableFormatting = true
+		}
+		if payload.ForTest {
+			opts.ForTest = true
+		}
+
+		optss = append(optss, &generation.Options{
+			ImportPaths:       paths,
+			PkgName:           opts.Package,
+			Interfaces:        opts.Interfaces,
+			Exclude:           opts.Exclude,
+			OutputDir:         opts.Dirname,
+			OutputFilename:    opts.Filename,
+			OutputImportPath:  opts.ImportPath,
+			Prefix:            opts.Prefix,
+			ConstructorPrefix: opts.ConstructorPrefix,
+			Force:             opts.Force,
+			DisableFormatting: opts.DisableFormatting,
+			GoImportsBinary:   opts.Goimports,
+			ForTest:           opts.ForTest,
+		})
+	}
+
+	return optss, nil
 }
 
 func validateOutputPaths(opts *generation.Options) (bool, error) {

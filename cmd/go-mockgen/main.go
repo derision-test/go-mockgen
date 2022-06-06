@@ -38,34 +38,41 @@ type solvableError interface {
 }
 
 func mainErr() error {
-	opts, err := parseArgs()
+	allOptions, err := parseAndValidateOptions()
 	if err != nil {
 		return err
 	}
 
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, opts.ImportPaths...)
+	var importPaths []string
+	for _, opts := range allOptions {
+		importPaths = append(importPaths, opts.ImportPaths...)
+	}
+
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPaths...)
 	if err != nil {
 		return fmt.Errorf("could not load packages %s (%s)", strings.Join(importPaths, ","), err.Error())
 	}
 
-	ifaces, err := types.Extract(pkgs, opts.ImportPaths, opts.Interfaces, opts.Exclude)
-	if err != nil {
-		return err
-	}
-
-	nameMap := make(map[string]struct{}, len(ifaces))
-	for _, t := range ifaces {
-		nameMap[strings.ToLower(t.Name)] = struct{}{}
-	}
-
-	for _, name := range opts.Interfaces {
-		if _, ok := nameMap[strings.ToLower(name)]; !ok {
-			return fmt.Errorf("type '%s' not found in supplied import paths", name)
+	for _, opts := range allOptions {
+		ifaces, err := types.Extract(pkgs, opts.ImportPaths, opts.Interfaces, opts.Exclude)
+		if err != nil {
+			return err
 		}
-	}
 
-	if err := generation.Generate(ifaces, opts); err != nil {
-		return err
+		nameMap := make(map[string]struct{}, len(ifaces))
+		for _, t := range ifaces {
+			nameMap[strings.ToLower(t.Name)] = struct{}{}
+		}
+
+		for _, name := range opts.Interfaces {
+			if _, ok := nameMap[strings.ToLower(name)]; !ok {
+				return fmt.Errorf("type '%s' not found in supplied import paths", name)
+			}
+		}
+
+		if err := generation.Generate(ifaces, opts); err != nil {
+			return err
+		}
 	}
 
 	return nil
