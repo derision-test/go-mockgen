@@ -39,6 +39,24 @@ The following flags are defined by the binary.
 | goimports          |            | Path to the goimports binary (uses goimports on your PATH by default). |
 | for-test           |            | Append _test suffix to generated package names and file names. |
 
+### Configuration file
+
+A configuration file is also supported. If no command line arguments are supplied, then the file `mockgen.yaml` in the current directory is used for input. The structure of the configuration file is as follows (where each entry in the `mocks` list can supply a value for each flag described above):
+
+```yaml
+mocks:
+- filename: enterprise/cmd/frontend/internal/app/mock_github_client_test.go
+    interfaces:
+      - githubClient
+    path: github.com/sourcegraph/sourcegraph/enterprise/cmd/frontend/internal/app
+  - filename: enterprise/cmd/frontend/internal/codeintel/httpapi/mock_iface_test.go
+    interfaces:
+      - DBStore
+      - GitHubClient
+```
+
+The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for prefixes and goimports will apply to each mock generator entry if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
+
 ## Testing with Mocks
 
 A mock value fulfills all of the methods of the target interface from which it was generated. Unless overridden, all methods of the mock will return zero values for everything. To override a specific method, you can set its `hook` or its `return values`.
