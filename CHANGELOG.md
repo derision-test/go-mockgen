@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-No changes yet.
+
+- Added `--file-prefix` flag. [#32](https://github.com/derision-test/go-mockgen/pull/32)
 
 ## [v1.3.0] - 2022-06-06
 

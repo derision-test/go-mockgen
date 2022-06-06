@@ -76,6 +76,7 @@ func parseFlags() (*generation.Options, error) {
 	app.Flag("disable-formatting", "Do not run goimports over the rendered files.").BoolVar(&opts.DisableFormatting)
 	app.Flag("goimports", "Path to the goimports binary.").Default("goimports").StringVar(&opts.GoImportsBinary)
 	app.Flag("for-test", "Append _test suffix to generated package names and file names.").Default("false").BoolVar(&opts.ForTest)
+	app.Flag("file-prefix", "Content that is written at the top of each generated file.").StringVar(&opts.FilePrefix)
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		return nil, err
@@ -99,6 +100,7 @@ func parseManifest() ([]*generation.Options, error) {
 		DisableFormatting bool     `yaml:"disable-formatting"`
 		Goimports         string   `yaml:"goimports"`
 		ForTest           bool     `yaml:"for-test"`
+		FilePrefix        string   `yaml:"file-prefix"`
 
 		Mocks []struct {
 			Path              string   `yaml:"path"`
@@ -115,6 +117,7 @@ func parseManifest() ([]*generation.Options, error) {
 			DisableFormatting bool     `yaml:"disable-formatting"`
 			Goimports         string   `yaml:"goimports"`
 			ForTest           bool     `yaml:"for-test"`
+			FilePrefix        string   `yaml:"file-prefix"`
 		} `yaml:"mocks"`
 	}
 	if err := yaml.Unmarshal(contents, &payload); err != nil {
@@ -135,6 +138,9 @@ func parseManifest() ([]*generation.Options, error) {
 		}
 		if opts.Goimports == "" {
 			opts.Goimports = payload.Goimports
+		}
+		if opts.FilePrefix == "" {
+			opts.FilePrefix = payload.FilePrefix
 		}
 
 		// Overwrite
@@ -171,6 +177,7 @@ func parseManifest() ([]*generation.Options, error) {
 			DisableFormatting: opts.DisableFormatting,
 			GoImportsBinary:   opts.Goimports,
 			ForTest:           opts.ForTest,
+			FilePrefix:        opts.FilePrefix,
 		})
 	}
 

@@ -38,6 +38,7 @@ The following flags are defined by the binary.
 | disable-formatting |            | Do not run goimports over the rendered files (enabled by default). |
 | goimports          |            | Path to the goimports binary (uses goimports on your PATH by default). |
 | for-test           |            | Append _test suffix to generated package names and file names. |
+| file-prefix        |            | Content that is written at the top of each generated file. |
 
 ### Configuration file
 
@@ -52,7 +53,7 @@ mocks:
     filename: foo/bar/mock_cache_test.go
 ```
 
-The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for prefixes and goimports will apply to each mock generator entry if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
+The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `file-prefix`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for interface and constructor prefixes, goimports, and file content prefixes will apply to each mock generator entry if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
 
 ## Testing with Mocks
 
