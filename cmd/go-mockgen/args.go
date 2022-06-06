@@ -121,18 +121,12 @@ func parseManifest() ([]*generation.Options, error) {
 		return nil, err
 	}
 
-	optss := make([]*generation.Options, 0, len(payload.Mocks))
+	allOptions := make([]*generation.Options, 0, len(payload.Mocks))
 	for _, opts := range payload.Mocks {
-		paths := opts.Paths
-		if opts.Path != "" {
-			paths = append(paths, opts.Path)
-		}
-		if opts.Goimports == "" {
-			opts.Goimports = "goimports"
-		}
-
+		// Mix
 		opts.Exclude = append(opts.Exclude, payload.Exclude...)
 
+		// Set if not overwritten in this entry
 		if opts.Prefix == "" {
 			opts.Prefix = payload.Prefix
 		}
@@ -143,6 +137,7 @@ func parseManifest() ([]*generation.Options, error) {
 			opts.Goimports = payload.Goimports
 		}
 
+		// Overwrite
 		if payload.Force {
 			opts.Force = true
 		}
@@ -153,7 +148,16 @@ func parseManifest() ([]*generation.Options, error) {
 			opts.ForTest = true
 		}
 
-		optss = append(optss, &generation.Options{
+		// Validation
+		paths := opts.Paths
+		if opts.Path != "" {
+			paths = append(paths, opts.Path)
+		}
+		if opts.Goimports == "" {
+			opts.Goimports = "goimports"
+		}
+
+		allOptions = append(allOptions, &generation.Options{
 			ImportPaths:       paths,
 			PkgName:           opts.Package,
 			Interfaces:        opts.Interfaces,
@@ -170,7 +174,7 @@ func parseManifest() ([]*generation.Options, error) {
 		})
 	}
 
-	return optss, nil
+	return allOptions, nil
 }
 
 func validateOutputPaths(opts *generation.Options) (bool, error) {
