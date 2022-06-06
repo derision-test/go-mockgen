@@ -4,7 +4,7 @@
 
 ### Added
 
-- Added support for configuration files. [#XX](https://github.com/derision-test/go-mockgen/pull/XX)
+- Added support for configuration files. [#31](https://github.com/derision-test/go-mockgen/pull/31)
 
 ## [v1.2.0] - 2022-03-28
 
