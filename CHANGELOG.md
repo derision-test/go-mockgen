@@ -9,6 +9,7 @@ No changes yet.
 ### Added
 
 - Added support for configuration files. [#31](https://github.com/derision-test/go-mockgen/pull/31)
+- Added `--constructor-prefix` flag. [#28](https://github.com/derision-test/go-mockgen/pull/28)
 
 ## [v1.2.0] - 2022-03-28
 
