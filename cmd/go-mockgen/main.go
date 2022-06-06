@@ -7,6 +7,7 @@ import (
 
 	"github.com/derision-test/go-mockgen/internal/mockgen/generation"
 	"github.com/derision-test/go-mockgen/internal/mockgen/types"
+	"golang.org/x/tools/go/packages"
 )
 
 func init() {
@@ -37,26 +38,42 @@ type solvableError interface {
 }
 
 func mainErr() error {
-	opts, err := parseArgs()
+	allOptions, err := parseAndValidateOptions()
 	if err != nil {
 		return err
 	}
 
-	ifaces, err := types.Extract(opts.ImportPaths, opts.Interfaces, opts.Exclude)
+	var importPaths []string
+	for _, opts := range allOptions {
+		importPaths = append(importPaths, opts.ImportPaths...)
+	}
+
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPaths...)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not load packages %s (%s)", strings.Join(importPaths, ","), err.Error())
 	}
 
-	nameMap := make(map[string]struct{}, len(ifaces))
-	for _, t := range ifaces {
-		nameMap[strings.ToLower(t.Name)] = struct{}{}
-	}
+	for _, opts := range allOptions {
+		ifaces, err := types.Extract(pkgs, opts.ImportPaths, opts.Interfaces, opts.Exclude)
+		if err != nil {
+			return err
+		}
 
-	for _, name := range opts.Interfaces {
-		if _, ok := nameMap[strings.ToLower(name)]; !ok {
-			return fmt.Errorf("type '%s' not found in supplied import paths", name)
+		nameMap := make(map[string]struct{}, len(ifaces))
+		for _, t := range ifaces {
+			nameMap[strings.ToLower(t.Name)] = struct{}{}
+		}
+
+		for _, name := range opts.Interfaces {
+			if _, ok := nameMap[strings.ToLower(name)]; !ok {
+				return fmt.Errorf("type '%s' not found in supplied import paths", name)
+			}
+		}
+
+		if err := generation.Generate(ifaces, opts); err != nil {
+			return err
 		}
 	}
 
-	return generation.Generate(ifaces, opts)
+	return nil
 }
