@@ -60,7 +60,7 @@ func gatherAllPackageTypes(pkgs []*packages.Package, workingDirectory string, im
 
 func gatherTypesForPackage(pkgs []*packages.Package, importPath, path string) (map[string]*Interface, error) {
 	for _, pkg := range pkgs {
-		if pkg.PkgPath != importPath {
+		if pkg.PkgPath != path {
 			continue
 		}
 
