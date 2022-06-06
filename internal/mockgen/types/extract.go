@@ -13,13 +13,13 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Extract(importPaths []string, targetNames, excludeNames []string) ([]*Interface, error) {
+func Extract(pkgs []*packages.Package, importPaths, targetNames, excludeNames []string) ([]*Interface, error) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
 	}
 
-	packageTypes, err := gatherAllPackageTypes(workingDirectory, importPaths)
+	packageTypes, err := gatherAllPackageTypes(pkgs, workingDirectory, importPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -41,13 +41,13 @@ func Extract(importPaths []string, targetNames, excludeNames []string) ([]*Inter
 	return ifaces, nil
 }
 
-func gatherAllPackageTypes(workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
+func gatherAllPackageTypes(pkgs []*packages.Package, workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
 	packageTypes := make(map[string]map[string]*Interface, len(importPaths))
 	for _, importPath := range importPaths {
 		path, dir := paths.ResolveImportPath(workingDirectory, importPath)
 		log.Printf("parsing package '%s'\n", paths.GetRelativePath(dir))
 
-		types, err := gatherTypesForPackage(workingDirectory, importPath, path)
+		types, err := gatherTypesForPackage(pkgs, importPath, path)
 		if err != nil {
 			return nil, err
 		}
@@ -58,22 +58,25 @@ func gatherAllPackageTypes(workingDirectory string, importPaths []string) (map[s
 	return packageTypes, nil
 }
 
-func gatherTypesForPackage(workingDirectory string, importPath, path string) (map[string]*Interface, error) {
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not load package %s (%s)", importPath, err.Error())
+func gatherTypesForPackage(pkgs []*packages.Package, importPath, path string) (map[string]*Interface, error) {
+	for _, pkg := range pkgs {
+		if pkg.PkgPath != importPath {
+			continue
+		}
+
+		for _, err := range pkg.Errors {
+			return nil, fmt.Errorf("malformed package %s (%s)", importPath, err.Msg)
+		}
+
+		visitor := newVisitor(path, pkg.Types)
+		for _, file := range pkg.Syntax {
+			ast.Walk(visitor, file)
+		}
+
+		return visitor.types, nil
 	}
 
-	for _, err := range pkgs[0].Errors {
-		return nil, fmt.Errorf("malformed package %s (%s)", importPath, err.Msg)
-	}
-
-	visitor := newVisitor(path, pkgs[0].Types)
-	for _, file := range pkgs[0].Syntax {
-		ast.Walk(visitor, file)
-	}
-
-	return visitor.types, nil
+	return nil, fmt.Errorf("malformed package %s (not found)", importPath)
 }
 
 func gatherAllPackageTypeNames(packageTypes map[string]map[string]*Interface) []string {

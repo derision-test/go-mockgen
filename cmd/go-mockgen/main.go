@@ -7,6 +7,7 @@ import (
 
 	"github.com/derision-test/go-mockgen/internal/mockgen/generation"
 	"github.com/derision-test/go-mockgen/internal/mockgen/types"
+	"golang.org/x/tools/go/packages"
 )
 
 func init() {
@@ -42,7 +43,12 @@ func mainErr() error {
 		return err
 	}
 
-	ifaces, err := types.Extract(opts.ImportPaths, opts.Interfaces, opts.Exclude)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, opts.ImportPaths...)
+	if err != nil {
+		return fmt.Errorf("could not load packages %s (%s)", strings.Join(importPaths, ","), err.Error())
+	}
+
+	ifaces, err := types.Extract(pkgs, opts.ImportPaths, opts.Interfaces, opts.Exclude)
 	if err != nil {
 		return err
 	}
@@ -58,5 +64,9 @@ func mainErr() error {
 		}
 	}
 
-	return generation.Generate(ifaces, opts)
+	if err := generation.Generate(ifaces, opts); err != nil {
+		return err
+	}
+
+	return nil
 }
