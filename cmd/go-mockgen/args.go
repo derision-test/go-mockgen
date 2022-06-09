@@ -178,8 +178,8 @@ func parseManifest() ([]*generation.Options, error) {
 
 		var packageOptions []generation.PackageOptions
 		if len(opts.Sources) > 0 {
-			if len(opts.Paths) > 0 {
-				return nil, fmt.Errorf("sources and path/paths are mutually exclusive")
+			if len(opts.Paths) > 0 || len(opts.Interfaces) > 0 {
+				return nil, fmt.Errorf("sources and path/paths/interfaces are mutually exclusive")
 			}
 
 			for _, source := range opts.Sources {
