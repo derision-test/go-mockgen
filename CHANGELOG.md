@@ -6,6 +6,10 @@
 
 - Added support for `sources` in config file. [#33](https://github.com/derision-test/go-mockgen/pull/33)
 
+### Fixed
+
+- Fixed broken `import-path` flag. [#34](https://github.com/derision-test/go-mockgen/pull/34)
+
 ## [v1.3.1] - 2022-06-06
 
 - Added `--file-prefix` flag. [#32](https://github.com/derision-test/go-mockgen/pull/32)
