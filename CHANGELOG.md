@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+No changes yet.
+
+## [v1.3.2] - 2022-06-09
+
 ### Added
 
 - Added support for `sources` in config file. [#33](https://github.com/derision-test/go-mockgen/pull/33)
@@ -71,7 +75,7 @@ No significant changes (only corrected version output).
 - We now run `goimports` over rendered files. [096f848](https://github.com/derision-test/go-mockgen/commit/096f848333579e185c8018ff2d17688e4b5f6f27)
 - Fixed output paths when directories are generated. [#10](https://github.com/derision-test/go-mockgen/pull/10)
 
-[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v1.3.2...HEAD
 [v1.0.0]: https://github.com/derision-test/go-mockgen/releases/tag/v1.0.0
 [v1.1.1]: https://github.com/derision-test/go-mockgen/compare/v1.0.0...v1.1.1
 [v1.1.2]: https://github.com/derision-test/go-mockgen/compare/v1.1.1...v1.1.2
@@ -80,3 +84,4 @@ No significant changes (only corrected version output).
 [v1.2.0]: https://github.com/derision-test/go-mockgen/compare/v1.1.4...v1.2.0
 [v1.3.0]: https://github.com/derision-test/go-mockgen/compare/v1.2.0...v1.3.0
 [v1.3.1]: https://github.com/derision-test/go-mockgen/compare/v1.3.0...v1.3.1
+[v1.3.2]: https://github.com/derision-test/go-mockgen/compare/v1.3.1...v1.3.2
