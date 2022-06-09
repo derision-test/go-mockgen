@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-Nothing changed yet.
+### Added
+
+- Added support for `sources` in config file. [#33](https://github.com/derision-test/go-mockgen/pull/33)
 
 ## [v1.3.1] - 2022-06-06
 

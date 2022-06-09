@@ -47,13 +47,23 @@ A configuration file is also supported. If no command line arguments are supplie
 ```yaml
 force: true
 mocks:
-  - path: github.com/cache/user/pkg
+  - filename: foo/bar/mock_cache_test.go
+    path: github.com/usr/pkg/cache
     interfaces:
       - Cache
-    filename: foo/bar/mock_cache_test.go
+  - filename: foo/baz/mocks_test.go
+    # Supports multiple package sources in a single file
+    sources:
+        - path: github.com/usr/pkg/timer
+          interfaces:
+            - Timer
+        - path: github.com/usr/pkg/stopwatch
+          interfaces:
+            - LapTimer
+            - Stopwatch
 ```
 
-The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `file-prefix`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for interface and constructor prefixes, goimports, and file content prefixes will apply to each mock generator entry if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
+The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `file-prefix`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for interface and constructor prefixes, goimports, generated packag names, and file content prefixes will apply to each mock generator entry source(s) if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
 
 ## Testing with Mocks
 
