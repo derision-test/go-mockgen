@@ -45,8 +45,12 @@ func mainErr() error {
 
 	var importPaths []string
 	for _, opts := range allOptions {
-		importPaths = append(importPaths, opts.ImportPaths...)
+		for _, packageOpts := range opts.PackageOptions {
+			importPaths = append(importPaths, packageOpts.ImportPaths...)
+		}
 	}
+
+	log.Printf("loading data for %d packages\n", len(importPaths))
 
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPaths...)
 	if err != nil {
@@ -54,7 +58,12 @@ func mainErr() error {
 	}
 
 	for _, opts := range allOptions {
-		ifaces, err := types.Extract(pkgs, opts.ImportPaths, opts.Interfaces, opts.Exclude)
+		typePackageOpts := make([]types.PackageOptions, 0, len(opts.PackageOptions))
+		for _, packageOpts := range opts.PackageOptions {
+			typePackageOpts = append(typePackageOpts, types.PackageOptions(packageOpts))
+		}
+
+		ifaces, err := types.Extract(pkgs, typePackageOpts)
 		if err != nil {
 			return err
 		}
@@ -64,9 +73,11 @@ func mainErr() error {
 			nameMap[strings.ToLower(t.Name)] = struct{}{}
 		}
 
-		for _, name := range opts.Interfaces {
-			if _, ok := nameMap[strings.ToLower(name)]; !ok {
-				return fmt.Errorf("type '%s' not found in supplied import paths", name)
+		for _, packageOpts := range opts.PackageOptions {
+			for _, name := range packageOpts.Interfaces {
+				if _, ok := nameMap[strings.ToLower(name)]; !ok {
+					return fmt.Errorf("type '%s' not found in supplied import paths", name)
+				}
 			}
 		}
 
