@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-No changes yet.
+### Added
+
+- Added support for `include-config-paths` in config file. [#35](https://github.com/derision-test/go-mockgen/pull/35)
 
 ## [v1.3.2] - 2022-06-09
 

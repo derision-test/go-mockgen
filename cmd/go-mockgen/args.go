@@ -90,48 +90,8 @@ func parseFlags() (*generation.Options, error) {
 }
 
 func parseManifest() ([]*generation.Options, error) {
-	contents, err := os.ReadFile("mockgen.yaml")
+	payload, err := readManifest()
 	if err != nil {
-		return nil, err
-	}
-
-	var payload struct {
-		// Global options
-		Exclude           []string `yaml:"exclude"`
-		Prefix            string   `yaml:"prefix"`
-		ConstructorPrefix string   `yaml:"constructor-prefix"`
-		Force             bool     `yaml:"force"`
-		DisableFormatting bool     `yaml:"disable-formatting"`
-		Goimports         string   `yaml:"goimports"`
-		ForTest           bool     `yaml:"for-test"`
-		FilePrefix        string   `yaml:"file-prefix"`
-
-		Mocks []struct {
-			Path    string   `yaml:"path"`
-			Paths   []string `yaml:"paths"`
-			Sources []struct {
-				Path       string   `yaml:"path"`
-				Paths      []string `yaml:"paths"`
-				Interfaces []string `yaml:"interfaces"`
-				Exclude    []string `yaml:"exclude"`
-				Prefix     string   `yaml:"prefix"`
-			} `yaml:"sources"`
-			Package           string   `yaml:"package"`
-			Interfaces        []string `yaml:"interfaces"`
-			Exclude           []string `yaml:"exclude"`
-			Dirname           string   `yaml:"dirname"`
-			Filename          string   `yaml:"filename"`
-			ImportPath        string   `yaml:"import-path"`
-			Prefix            string   `yaml:"prefix"`
-			ConstructorPrefix string   `yaml:"constructor-prefix"`
-			Force             bool     `yaml:"force"`
-			DisableFormatting bool     `yaml:"disable-formatting"`
-			Goimports         string   `yaml:"goimports"`
-			ForTest           bool     `yaml:"for-test"`
-			FilePrefix        string   `yaml:"file-prefix"`
-		} `yaml:"mocks"`
-	}
-	if err := yaml.Unmarshal(contents, &payload); err != nil {
 		return nil, err
 	}
 
@@ -226,6 +186,86 @@ func parseManifest() ([]*generation.Options, error) {
 	}
 
 	return allOptions, nil
+}
+
+type yamlPayload struct {
+	// Meta options
+	IncludeConfigPaths []string `yaml:"include-config-paths"`
+
+	// Global options
+	Exclude           []string `yaml:"exclude"`
+	Prefix            string   `yaml:"prefix"`
+	ConstructorPrefix string   `yaml:"constructor-prefix"`
+	Force             bool     `yaml:"force"`
+	DisableFormatting bool     `yaml:"disable-formatting"`
+	Goimports         string   `yaml:"goimports"`
+	ForTest           bool     `yaml:"for-test"`
+	FilePrefix        string   `yaml:"file-prefix"`
+
+	Mocks []yamlMock `yaml:"mocks"`
+}
+
+type yamlMock struct {
+	Path              string       `yaml:"path"`
+	Paths             []string     `yaml:"paths"`
+	Sources           []yamlSource `yaml:"sources"`
+	Package           string       `yaml:"package"`
+	Interfaces        []string     `yaml:"interfaces"`
+	Exclude           []string     `yaml:"exclude"`
+	Dirname           string       `yaml:"dirname"`
+	Filename          string       `yaml:"filename"`
+	ImportPath        string       `yaml:"import-path"`
+	Prefix            string       `yaml:"prefix"`
+	ConstructorPrefix string       `yaml:"constructor-prefix"`
+	Force             bool         `yaml:"force"`
+	DisableFormatting bool         `yaml:"disable-formatting"`
+	Goimports         string       `yaml:"goimports"`
+	ForTest           bool         `yaml:"for-test"`
+	FilePrefix        string       `yaml:"file-prefix"`
+}
+
+type yamlSource struct {
+	Path       string   `yaml:"path"`
+	Paths      []string `yaml:"paths"`
+	Interfaces []string `yaml:"interfaces"`
+	Exclude    []string `yaml:"exclude"`
+	Prefix     string   `yaml:"prefix"`
+}
+
+func readManifest() (yamlPayload, error) {
+	contents, err := os.ReadFile("mockgen.yaml")
+	if err != nil {
+		return yamlPayload{}, err
+	}
+
+	var payload yamlPayload
+	if err := yaml.Unmarshal(contents, &payload); err != nil {
+		return yamlPayload{}, err
+	}
+
+	for _, path := range payload.IncludeConfigs {
+		payload, err = readIncludeConfig(payload, path)
+		if err != nil {
+			return yamlPayload{}, err
+		}
+	}
+
+	return payload, nil
+}
+
+func readIncludeConfig(payload yamlPayload, path string) (yamlPayload, error) {
+	contents, err := os.ReadFile("mockgen.yaml")
+	if err != nil {
+		return yamlPayload{}, err
+	}
+
+	var mocks []yamlMock
+	if err := yaml.Unmarshal(contents, &mocks); err != nil {
+		return yamlPayload{}, err
+	}
+
+	payload.Mocks = append(payload.Mocks, mocks...)
+	return payload, nil
 }
 
 func validateOutputPaths(opts *generation.Options) (bool, error) {
