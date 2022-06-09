@@ -13,10 +13,22 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Extract(pkgs []*packages.Package, importPaths, targetNames, excludeNames []string) ([]*Interface, error) {
+type PackageOptions struct {
+	ImportPaths []string
+	Interfaces  []string
+	Exclude     []string
+	Prefix      string
+}
+
+func Extract(pkgs []*packages.Package, packageOptions []PackageOptions) (ifaces []*Interface, _ error) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
+	}
+
+	var importPaths []string
+	for _, packageOpts := range packageOptions {
+		importPaths = append(importPaths, packageOpts.ImportPaths...)
 	}
 
 	packageTypes, err := gatherAllPackageTypes(pkgs, workingDirectory, importPaths)
@@ -24,17 +36,17 @@ func Extract(pkgs []*packages.Package, importPaths, targetNames, excludeNames []
 		return nil, err
 	}
 
-	typeNames := gatherAllPackageTypeNames(packageTypes)
+	for _, packageOpts := range packageOptions {
+		for _, name := range gatherAllPackageTypeNames(packageTypes) {
+			iface, err := extractInterface(packageTypes, name, packageOpts.Interfaces, packageOpts.Exclude)
+			if err != nil {
+				return nil, err
+			}
 
-	ifaces := make([]*Interface, 0, len(typeNames))
-	for _, name := range typeNames {
-		iface, err := extractInterface(packageTypes, name, targetNames, excludeNames)
-		if err != nil {
-			return nil, err
-		}
-
-		if iface != nil {
-			ifaces = append(ifaces, iface)
+			if iface != nil {
+				iface.Prefix = packageOpts.Prefix
+				ifaces = append(ifaces, iface)
+			}
 		}
 	}
 
