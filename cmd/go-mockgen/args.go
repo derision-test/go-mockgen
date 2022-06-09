@@ -243,7 +243,7 @@ func readManifest() (yamlPayload, error) {
 		return yamlPayload{}, err
 	}
 
-	for _, path := range payload.IncludeConfigs {
+	for _, path := range payload.IncludeConfigPaths {
 		payload, err = readIncludeConfig(payload, path)
 		if err != nil {
 			return yamlPayload{}, err
