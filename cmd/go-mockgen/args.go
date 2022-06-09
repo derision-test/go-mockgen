@@ -254,7 +254,7 @@ func readManifest() (yamlPayload, error) {
 }
 
 func readIncludeConfig(payload yamlPayload, path string) (yamlPayload, error) {
-	contents, err := os.ReadFile("mockgen.yaml")
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return yamlPayload{}, err
 	}
