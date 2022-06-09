@@ -73,7 +73,7 @@ func parseFlags() (*generation.Options, error) {
 	app.Flag("exclude", "A list of interfaces to exclude from generation. Mocks for all other exported interfaces defined in the given import paths are generated.").Short('e').StringsVar(&opts.PackageOptions[0].Exclude)
 	app.Flag("dirname", "The target output directory. Each mock will be written to a unique file.").Short('d').StringVar(&opts.OutputOptions.OutputDir)
 	app.Flag("filename", "The target output file. All mocks are written to this file.").Short('o').StringVar(&opts.OutputOptions.OutputFilename)
-	app.Flag("import-path", "The import path of the generated package. It will be inferred from the target directory by default.").StringVar(&opts.ContentOptions.OutputImportPath)
+	app.Flag("import-path", "The import path of the generated package. It will be inferred from the target directory by default.").StringVar(&opts.ContentOptions.PkgName)
 	app.Flag("prefix", "A prefix used in the name of each mock struct. Should be TitleCase by convention.").StringVar(&opts.ContentOptions.Prefix)
 	app.Flag("constructor-prefix", "A prefix used in the name of each mock constructor function (after the initial `New`/`NewStrict` prefixes). Should be TitleCase by convention.").StringVar(&opts.ContentOptions.ConstructorPrefix)
 	app.Flag("force", "Do not abort if a write to disk would overwrite an existing file.").Short('f').BoolVar(&opts.OutputOptions.Force)
