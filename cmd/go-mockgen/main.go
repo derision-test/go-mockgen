@@ -52,7 +52,7 @@ func mainErr() error {
 
 	log.Printf("loading data for %d packages\n", len(importPaths))
 
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPaths...)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes | packages.NeedDeps}, importPaths...)
 	if err != nil {
 		return fmt.Errorf("could not load packages %s (%s)", strings.Join(importPaths, ","), err.Error())
 	}
