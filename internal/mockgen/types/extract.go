@@ -26,17 +26,12 @@ func Extract(pkgs []*packages.Package, packageOptions []PackageOptions) (ifaces 
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
 	}
 
-	var importPaths []string
 	for _, packageOpts := range packageOptions {
-		importPaths = append(importPaths, packageOpts.ImportPaths...)
-	}
+		packageTypes, err := gatherAllPackageTypes(pkgs, workingDirectory, packageOpts.ImportPaths)
+		if err != nil {
+			return nil, err
+		}
 
-	packageTypes, err := gatherAllPackageTypes(pkgs, workingDirectory, importPaths)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, packageOpts := range packageOptions {
 		for _, name := range gatherAllPackageTypeNames(packageTypes) {
 			iface, err := extractInterface(packageTypes, name, packageOpts.Interfaces, packageOpts.Exclude)
 			if err != nil {
