@@ -4,6 +4,10 @@
 
 Nothing yet!
 
+## [v1.3.5] - 2022-10-26
+
+- Config file loading now disambiguates interfaces with the same names in multiple search packages. [#36](https://github.com/derision-test/go-mockgen/pull/36)
+
 ## [v1.3.4] - 2022-08-11
 
 - Added `NeedDeps` mode to package loader (prevents fatal log from within `golang.org/x/tools/go/packages` in some circumstances). [3ae60a2](https://github.com/derision-test/go-mockgen/commit/3ae60a20c75f7eb1ae85fc6af66f237f5ee1a04d)
@@ -83,7 +87,7 @@ No significant changes (only corrected version output).
 - We now run `goimports` over rendered files. [096f848](https://github.com/derision-test/go-mockgen/commit/096f848333579e185c8018ff2d17688e4b5f6f27)
 - Fixed output paths when directories are generated. [#10](https://github.com/derision-test/go-mockgen/pull/10)
 
-[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v1.3.4...HEAD
+[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v1.3.5...HEAD
 [v1.0.0]: https://github.com/derision-test/go-mockgen/releases/tag/v1.0.0
 [v1.1.1]: https://github.com/derision-test/go-mockgen/compare/v1.0.0...v1.1.1
 [v1.1.2]: https://github.com/derision-test/go-mockgen/compare/v1.1.1...v1.1.2
@@ -95,3 +99,4 @@ No significant changes (only corrected version output).
 [v1.3.2]: https://github.com/derision-test/go-mockgen/compare/v1.3.1...v1.3.2
 [v1.3.3]: https://github.com/derision-test/go-mockgen/compare/v1.3.2...v1.3.3
 [v1.3.4]: https://github.com/derision-test/go-mockgen/compare/v1.3.3...v1.3.4
+[v1.3.5]: https://github.com/derision-test/go-mockgen/compare/v1.3.4...v1.3.5
