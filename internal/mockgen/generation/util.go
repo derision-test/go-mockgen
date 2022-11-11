@@ -27,7 +27,7 @@ func selfAppend(sliceRef *jen.Statement, value jen.Code) jen.Code {
 	return compose(sliceRef, jen.Op("=").Id("append").Call(sliceRef, value))
 }
 
-func addTypes(code *jen.Statement, typeParams []types.TypeParam, includeTypes bool) *jen.Statement {
+func addTypes(code *jen.Statement, typeParams []types.TypeParam, outputImportPath string, includeTypes bool) *jen.Statement {
 	if len(typeParams) == 0 {
 		return code
 	}
@@ -35,7 +35,7 @@ func addTypes(code *jen.Statement, typeParams []types.TypeParam, includeTypes bo
 	types := make([]jen.Code, 0, len(typeParams))
 	for _, typeParam := range typeParams {
 		if includeTypes {
-			types = append(types, compose(jen.Id(typeParam.Name), generateType(typeParam.Type, "", "", false)))
+			types = append(types, compose(jen.Id(typeParam.Name), generateType(typeParam.Type, "", outputImportPath, false)))
 		} else {
 			types = append(types, jen.Id(typeParam.Name))
 		}
