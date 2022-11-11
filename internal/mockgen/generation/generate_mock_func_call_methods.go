@@ -25,7 +25,7 @@ func generateMockFuncCallArgsMethodNonVariadic(iface *wrappedInterface, method *
 	returnStatement := jen.Return().Index().Interface().Values(valueExpressions...)
 
 	results := []jen.Code{jen.Index().Interface()}
-	return generateMockFuncCallMethod(iface, method, "Args", commentText, nil, results,
+	return generateMockFuncCallMethod(iface, outputImportPath, method, "Args", commentText, nil, results,
 		returnStatement, // return []interface{ c.Arg<n>, ... }
 	)
 }
@@ -50,7 +50,7 @@ func generateMockFuncCallArgsMethodVariadic(iface *wrappedInterface, method *wra
 	returnStatement := jen.Return().Append(simpleValuesExpression, jen.Id("trailing").Op("..."))
 
 	results := []jen.Code{jen.Index().Interface()}
-	return generateMockFuncCallMethod(iface, method, "Args", commentText, nil, results,
+	return generateMockFuncCallMethod(iface, outputImportPath, method, "Args", commentText, nil, results,
 		trailingDeclaration,                   // trailingDeclaration := []interface{}
 		loopStatement, jen.Line(), jen.Line(), // for _, val := range Arg<lastIndex> { trailing = append(trailing, val) }
 		returnStatement, // return append([]interface{ <values>, ... }, trailing...)
@@ -68,13 +68,14 @@ func generateMockFuncCallResultsMethod(iface *wrappedInterface, method *wrappedM
 	returnStatement := jen.Return().Index().Interface().Values(values...)
 
 	results := []jen.Code{jen.Index().Interface()}
-	return generateMockFuncCallMethod(iface, method, "Results", commentText, nil, results,
+	return generateMockFuncCallMethod(iface, outputImportPath, method, "Results", commentText, nil, results,
 		returnStatement, // return []interface{ c.Result<n>, ... }
 	)
 }
 
 func generateMockFuncCallMethod(
 	iface *wrappedInterface,
+	outputImportPath string,
 	method *wrappedMethod,
 	methodName string,
 	commentText string,
@@ -82,7 +83,7 @@ func generateMockFuncCallMethod(
 	body ...jen.Code,
 ) jen.Code {
 	mockFuncCallStructName := fmt.Sprintf("%s%s%sFuncCall", iface.prefix, iface.titleName, method.Name)
-	receiver := compose(jen.Id("c"), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))
+	receiver := compose(jen.Id("c"), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, outputImportPath, false))
 	methodDeclaration := jen.Func().Params(receiver).Id(methodName).Params(params...).Params(results...).Block(body...)
 	return addComment(methodDeclaration, 1, commentText)
 }
