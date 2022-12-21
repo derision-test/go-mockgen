@@ -1,6 +1,8 @@
 # go-mockgen
 
-[![PkgGoDev](https://pkg.go.dev/badge/badge/github.com/derision-test/go-mockgen.svg)](https://pkg.go.dev/github.com/derision-test/go-mockgen) [![CircleCI status](https://circleci.com/gh/derision-test/go-mockgen.svg?style=svg)](https://circleci.com/gh/derision-test/go-mockgen) [![Coverage status](https://coveralls.io/repos/github/derision-test/go-mockgen/badge.svg?branch=master)](https://coveralls.io/github/derision-test/go-mockgen?branch=master) ![Sonarcloud bugs count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=bugs) ![Sonarcloud vulnerabilities count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=vulnerabilities) ![Sonarcloud maintainability rating](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=sqale_rating) ![Sonarcloud code smells count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=code_smells)
+[![PkgGoDev](https://pkg.go.dev/badge/badge/github.com/derision-test/go-mockgen.svg)](https://pkg.go.dev/github.com/derision-test/go-mockgen)
+[![Build status](https://github.com/derision-test/go-mockgen/actions/workflows/test.yml/badge.svg)](https://github.com/derision-test/go-mockgen/actions/workflows/test.yml)
+[![Latest release](https://img.shields.io/github/release/sourcegraph/Sourcegraph.svg)](https://github.com/sourcegraph/sourcegraph/releases/)
 
 A mock interface code generator (supports generics as of [v1.2.0](https://github.com/derision-test/go-mockgen/releases/tag/v1.2.0) 🎉).
 
@@ -231,25 +233,3 @@ Expect(cache.SetFunc).To(BeCalledWith("foo", "bar"))
 // Ensure cache.Set("foo", _) was called
 Expect(cache.SetFunc).To(BeCalledWith("foo", BeAnything()))
 ```
-
-## License
-
-Copyright (c) 2022 Eric Fritz
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
