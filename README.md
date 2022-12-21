@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/badge/github.com/derision-test/go-mockgen.svg)](https://pkg.go.dev/github.com/derision-test/go-mockgen)
 [![Build status](https://github.com/derision-test/go-mockgen/actions/workflows/test.yml/badge.svg)](https://github.com/derision-test/go-mockgen/actions/workflows/test.yml)
-[![Latest release](https://img.shields.io/github/release/sourcegraph/Sourcegraph.svg)](https://github.com/sourcegraph/sourcegraph/releases/)
+[![Latest release](https://img.shields.io/github/release/derision-test/go-mockgen.svg)](https://github.com/derision-test/go-mockgen/releases/)
 
 A mock interface code generator (supports generics as of [v1.2.0](https://github.com/derision-test/go-mockgen/releases/tag/v1.2.0) 🎉).
 
