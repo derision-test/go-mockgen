@@ -20,3 +20,7 @@ type I3[T SignedIntegerConstraint] interface {
 type I4[T interface{ ~string }] interface {
 	M4(I1[T]) int
 }
+
+type fooer[T any] interface {
+	Foo() T
+}
