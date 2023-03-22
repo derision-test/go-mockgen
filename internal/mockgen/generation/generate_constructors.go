@@ -38,7 +38,7 @@ func generateMockStructStrictConstructor(iface *wrappedInterface, constructorPre
 func generateMockStructFromConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	if !unicode.IsUpper([]rune(iface.Name)[0]) {
 		surrogateStructName := fmt.Sprintf("surrogateMock%s", iface.titleName)
-		surrogateDefinition := generateSurrogateInterface(iface, surrogateStructName)
+		surrogateDefinition := generateSurrogateInterface(iface, surrogateStructName, outputImportPath)
 		name := jen.Id(surrogateStructName)
 		constructor := generateMockStructFromConstructorCommon(iface, name, constructorPrefix, outputImportPath)
 		return compose(surrogateDefinition, constructor)
@@ -103,7 +103,7 @@ func generatePanickingFunction(iface *wrappedInterface, method *wrappedMethod, o
 	return jen.Func().Params(method.paramTypes...).Params(method.resultTypes...).Block(panicStatement)
 }
 
-func generateSurrogateInterface(iface *wrappedInterface, surrogateName string) *jen.Statement {
+func generateSurrogateInterface(iface *wrappedInterface, surrogateName, outputImportPath string) *jen.Statement {
 	surrogateCommentText := strings.Join([]string{
 		fmt.Sprintf(`%s is a copy of the %s interface (from the package %s).`, surrogateName, iface.Name, iface.ImportPath),
 		`It is redefined here as it is unexported in the source package.`,
@@ -115,7 +115,7 @@ func generateSurrogateInterface(iface *wrappedInterface, surrogateName string) *
 	}
 
 	// type <SurrogateName> interface { <MethodName>(<Param #n>, ...) (<Result #n>, ...), ... }
-	typeDeclaration := jen.Type().Id(surrogateName).Interface(signatures...).Line()
+	typeDeclaration := addTypes(jen.Type().Id(surrogateName), iface.Interface.TypeParams, outputImportPath, true).Interface(signatures...).Line()
 	return addComment(typeDeclaration, 1, surrogateCommentText)
 }
 
