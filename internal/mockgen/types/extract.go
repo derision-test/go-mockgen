@@ -72,7 +72,12 @@ func gatherTypesForPackage(pkgs []*packages.Package, importPath, path string) (m
 		}
 
 		for _, err := range pkg.Errors {
-			return nil, fmt.Errorf("malformed package %s (%s)", importPath, err.Msg)
+			switch err.Kind {
+			case packages.TypeError:
+				log.Printf("package %s failed to type check, but attempting to continue: %s", importPath, err.Msg)
+			default:
+				return nil, fmt.Errorf("malformed package %s (%s)", importPath, err.Msg)
+			}
 		}
 
 		visitor := newVisitor(path, pkg.Types)
