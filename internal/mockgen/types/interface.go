@@ -11,6 +11,9 @@ type Interface struct {
 	ImportPath string
 	TypeParams []TypeParam
 	Methods    []*Method
+
+	// Prefix is set on extraction based on the current PackageOptions
+	Prefix string
 }
 
 type TypeParam struct {

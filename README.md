@@ -1,6 +1,8 @@
 # go-mockgen
 
-[![PkgGoDev](https://pkg.go.dev/badge/badge/github.com/derision-test/go-mockgen.svg)](https://pkg.go.dev/github.com/derision-test/go-mockgen) [![CircleCI status](https://circleci.com/gh/derision-test/go-mockgen.svg?style=svg)](https://circleci.com/gh/derision-test/go-mockgen) [![Coverage status](https://coveralls.io/repos/github/derision-test/go-mockgen/badge.svg?branch=master)](https://coveralls.io/github/derision-test/go-mockgen?branch=master) ![Sonarcloud bugs count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=bugs) ![Sonarcloud vulnerabilities count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=vulnerabilities) ![Sonarcloud maintainability rating](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=sqale_rating) ![Sonarcloud code smells count](https://sonarcloud.io/api/project_badges/measure?project=derision-test_go-mockgen&metric=code_smells)
+[![PkgGoDev](https://pkg.go.dev/badge/badge/github.com/derision-test/go-mockgen.svg)](https://pkg.go.dev/github.com/derision-test/go-mockgen)
+[![Build status](https://github.com/derision-test/go-mockgen/actions/workflows/test.yml/badge.svg)](https://github.com/derision-test/go-mockgen/actions/workflows/test.yml)
+[![Latest release](https://img.shields.io/github/release/derision-test/go-mockgen.svg)](https://github.com/derision-test/go-mockgen/releases/)
 
 A mock interface code generator (supports generics as of [v1.2.0](https://github.com/derision-test/go-mockgen/releases/tag/v1.2.0) 🎉).
 
@@ -38,6 +40,64 @@ The following flags are defined by the binary.
 | disable-formatting |            | Do not run goimports over the rendered files (enabled by default). |
 | goimports          |            | Path to the goimports binary (uses goimports on your PATH by default). |
 | for-test           |            | Append _test suffix to generated package names and file names. |
+| file-prefix        |            | Content that is written at the top of each generated file. |
+
+### Configuration file
+
+A configuration file is also supported. If no command line arguments are supplied, then the file `mockgen.yaml` in the current directory is used for input. The structure of the configuration file is as follows (where each entry in the `mocks` list can supply a value for each flag described above):
+
+```yaml
+force: true
+mocks:
+  - filename: foo/bar/mock_cache_test.go
+    path: github.com/usr/pkg/cache
+    interfaces:
+      - Cache
+  - filename: foo/baz/mocks_test.go
+    # Supports multiple package sources in a single file
+    sources:
+      - path: github.com/usr/pkg/timer
+        interfaces:
+          - Timer
+      - path: github.com/usr/pkg/stopwatch
+        interfaces:
+          - LapTimer
+          - Stopwatch
+```
+
+The top level of the configuration file may also set the keys `exclude`, `prefix`, `constructor-prefix`, `goimports`, `file-prefix`, `force`, `disable-formatting`, and `for-tests`. Top-level excludes will also be applied to each mock generator entry. The values for interface and constructor prefixes, goimports, generated packag names, and file content prefixes will apply to each mock generator entry source(s) if a value is not set. The remaining boolean values will be true for each mock generator entry if set at the top level (regardless of the setting of each entry).
+
+To organize long lists of mocks, multiple files can be used, as follows.
+
+```yaml
+include-config-paths:
+  - foo.mockgen.yaml
+  - bar.mockgen.yaml
+  - baz.mockgen.yaml
+mocks:
+  - filename: foo/bar/mock_cache_test.go
+    path: github.com/usr/pkg/cache
+    interfaces:
+      - Cache
+```
+
+This file results in the mocks defined in the `mockgen.yaml` file, concatenated with the mocks defined in `{foo,bar,baz}.mockgen.yaml`. The included config paths do not have global-level configuration and should encode a top-level mocks array, e.g., 
+
+```yaml
+- filename: mock_cache_test.go
+  path: github.com/usr/pkg/cache
+  interfaces:
+    - Cache
+- filename: mock_timer_test.go
+  path: github.com/usr/pkg/timer
+  interfaces:
+    - Timer
+- filename: mock_stopwatch_test.go
+  path: github.com/usr/pkg/stopwatch
+  interfaces:
+    - LapTimer
+    - Stopwatch
+```
 
 ## Testing with Mocks
 
@@ -174,25 +234,3 @@ Expect(cache.SetFunc).To(BeCalledWith("foo", "bar"))
 // Ensure cache.Set("foo", _) was called
 Expect(cache.SetFunc).To(BeCalledWith("foo", BeAnything()))
 ```
-
-## License
-
-Copyright (c) 2022 Eric Fritz
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.

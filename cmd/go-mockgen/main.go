@@ -7,6 +7,7 @@ import (
 
 	"github.com/derision-test/go-mockgen/internal/mockgen/generation"
 	"github.com/derision-test/go-mockgen/internal/mockgen/types"
+	"golang.org/x/tools/go/packages"
 )
 
 func init() {
@@ -37,26 +38,53 @@ type solvableError interface {
 }
 
 func mainErr() error {
-	opts, err := parseArgs()
+	allOptions, err := parseAndValidateOptions()
 	if err != nil {
 		return err
 	}
 
-	ifaces, err := types.Extract(opts.ImportPaths, opts.Interfaces, opts.Exclude)
-	if err != nil {
-		return err
-	}
-
-	nameMap := make(map[string]struct{}, len(ifaces))
-	for _, t := range ifaces {
-		nameMap[strings.ToLower(t.Name)] = struct{}{}
-	}
-
-	for _, name := range opts.Interfaces {
-		if _, ok := nameMap[strings.ToLower(name)]; !ok {
-			return fmt.Errorf("type '%s' not found in supplied import paths", name)
+	var importPaths []string
+	for _, opts := range allOptions {
+		for _, packageOpts := range opts.PackageOptions {
+			importPaths = append(importPaths, packageOpts.ImportPaths...)
 		}
 	}
 
-	return generation.Generate(ifaces, opts)
+	log.Printf("loading data for %d packages\n", len(importPaths))
+
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName | packages.NeedImports | packages.NeedSyntax | packages.NeedTypes | packages.NeedDeps}, importPaths...)
+	if err != nil {
+		return fmt.Errorf("could not load packages %s (%s)", strings.Join(importPaths, ","), err.Error())
+	}
+
+	for _, opts := range allOptions {
+		typePackageOpts := make([]types.PackageOptions, 0, len(opts.PackageOptions))
+		for _, packageOpts := range opts.PackageOptions {
+			typePackageOpts = append(typePackageOpts, types.PackageOptions(packageOpts))
+		}
+
+		ifaces, err := types.Extract(pkgs, typePackageOpts)
+		if err != nil {
+			return err
+		}
+
+		nameMap := make(map[string]struct{}, len(ifaces))
+		for _, t := range ifaces {
+			nameMap[strings.ToLower(t.Name)] = struct{}{}
+		}
+
+		for _, packageOpts := range opts.PackageOptions {
+			for _, name := range packageOpts.Interfaces {
+				if _, ok := nameMap[strings.ToLower(name)]; !ok {
+					return fmt.Errorf("type '%s' not found in supplied import paths", name)
+				}
+			}
+		}
+
+		if err := generation.Generate(ifaces, opts); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

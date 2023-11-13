@@ -13,41 +13,48 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Extract(importPaths []string, targetNames, excludeNames []string) ([]*Interface, error) {
+type PackageOptions struct {
+	ImportPaths []string
+	Interfaces  []string
+	Exclude     []string
+	Prefix      string
+}
+
+func Extract(pkgs []*packages.Package, packageOptions []PackageOptions) (ifaces []*Interface, _ error) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
 	}
 
-	packageTypes, err := gatherAllPackageTypes(workingDirectory, importPaths)
-	if err != nil {
-		return nil, err
-	}
-
-	typeNames := gatherAllPackageTypeNames(packageTypes)
-
-	ifaces := make([]*Interface, 0, len(typeNames))
-	for _, name := range typeNames {
-		iface, err := extractInterface(packageTypes, name, targetNames, excludeNames)
+	for _, packageOpts := range packageOptions {
+		packageTypes, err := gatherAllPackageTypes(pkgs, workingDirectory, packageOpts.ImportPaths)
 		if err != nil {
 			return nil, err
 		}
 
-		if iface != nil {
-			ifaces = append(ifaces, iface)
+		for _, name := range gatherAllPackageTypeNames(packageTypes) {
+			iface, err := extractInterface(packageTypes, name, packageOpts.Interfaces, packageOpts.Exclude)
+			if err != nil {
+				return nil, err
+			}
+
+			if iface != nil {
+				iface.Prefix = packageOpts.Prefix
+				ifaces = append(ifaces, iface)
+			}
 		}
 	}
 
 	return ifaces, nil
 }
 
-func gatherAllPackageTypes(workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
+func gatherAllPackageTypes(pkgs []*packages.Package, workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
 	packageTypes := make(map[string]map[string]*Interface, len(importPaths))
 	for _, importPath := range importPaths {
 		path, dir := paths.ResolveImportPath(workingDirectory, importPath)
 		log.Printf("parsing package '%s'\n", paths.GetRelativePath(dir))
 
-		types, err := gatherTypesForPackage(workingDirectory, importPath, path)
+		types, err := gatherTypesForPackage(pkgs, importPath, path)
 		if err != nil {
 			return nil, err
 		}
@@ -58,22 +65,30 @@ func gatherAllPackageTypes(workingDirectory string, importPaths []string) (map[s
 	return packageTypes, nil
 }
 
-func gatherTypesForPackage(workingDirectory string, importPath, path string) (map[string]*Interface, error) {
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedImports | packages.NeedSyntax | packages.NeedTypes}, importPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not load package %s (%s)", importPath, err.Error())
+func gatherTypesForPackage(pkgs []*packages.Package, importPath, path string) (map[string]*Interface, error) {
+	for _, pkg := range pkgs {
+		if pkg.PkgPath != path {
+			continue
+		}
+
+		for _, err := range pkg.Errors {
+			switch err.Kind {
+			case packages.TypeError:
+				log.Printf("package %s failed to type check, but attempting to continue: %s", importPath, err.Msg)
+			default:
+				return nil, fmt.Errorf("malformed package %s (%s)", importPath, err.Msg)
+			}
+		}
+
+		visitor := newVisitor(path, pkg.Types)
+		for _, file := range pkg.Syntax {
+			ast.Walk(visitor, file)
+		}
+
+		return visitor.types, nil
 	}
 
-	for _, err := range pkgs[0].Errors {
-		return nil, fmt.Errorf("malformed package %s (%s)", importPath, err.Msg)
-	}
-
-	visitor := newVisitor(path, pkgs[0].Types)
-	for _, file := range pkgs[0].Syntax {
-		ast.Walk(visitor, file)
-	}
-
-	return visitor.types, nil
+	return nil, fmt.Errorf("malformed package %s (not found)", importPath)
 }
 
 func gatherAllPackageTypeNames(packageTypes map[string]map[string]*Interface) []string {

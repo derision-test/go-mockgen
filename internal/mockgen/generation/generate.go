@@ -17,23 +17,37 @@ import (
 )
 
 type Options struct {
-	ImportPaths       []string
-	PkgName           string
-	Interfaces        []string
-	Exclude           []string
+	PackageOptions []PackageOptions
+	OutputOptions  OutputOptions
+	ContentOptions ContentOptions
+}
+
+type PackageOptions struct {
+	ImportPaths []string
+	Interfaces  []string
+	Exclude     []string
+	Prefix      string
+}
+
+type OutputOptions struct {
 	OutputFilename    string
 	OutputDir         string
-	OutputImportPath  string
-	Prefix            string
-	ConstructorPrefix string
 	Force             bool
 	DisableFormatting bool
 	GoImportsBinary   string
 	ForTest           bool
 }
 
+type ContentOptions struct {
+	PkgName           string
+	OutputImportPath  string
+	Prefix            string
+	ConstructorPrefix string
+	FilePrefix        string
+}
+
 func Generate(ifaces []*types.Interface, opts *Options) error {
-	if opts.OutputFilename != "" {
+	if opts.OutputOptions.OutputFilename != "" {
 		return generateFile(ifaces, opts)
 	}
 
@@ -41,19 +55,19 @@ func Generate(ifaces []*types.Interface, opts *Options) error {
 }
 
 func generateFile(ifaces []*types.Interface, opts *Options) error {
-	basename := opts.OutputFilename
-	if opts.ForTest {
+	basename := opts.OutputOptions.OutputFilename
+	if opts.OutputOptions.ForTest {
 		ext := filepath.Ext(basename)
 		basename = strings.TrimSuffix(basename, ext) + "_test" + ext
 	}
 
-	filename := filepath.Join(opts.OutputDir, basename)
+	filename := filepath.Join(opts.OutputOptions.OutputDir, basename)
 
 	exists, err := paths.Exists(filename)
 	if err != nil {
 		return err
 	}
-	if exists && !opts.Force {
+	if exists && !opts.OutputOptions.Force {
 		return fmt.Errorf("filename %s already exists, overwrite with --force", paths.GetRelativePath(filename))
 	}
 
@@ -61,25 +75,29 @@ func generateFile(ifaces []*types.Interface, opts *Options) error {
 }
 
 func generateDirectory(ifaces []*types.Interface, opts *Options) error {
-	var prefix string
-	if opts.Prefix != "" {
-		prefix = opts.Prefix + "_"
-	}
-
 	suffix := "_mock"
-	if opts.ForTest {
+	if opts.OutputOptions.ForTest {
 		suffix += "_test"
 	}
 
-	makeFilename := func(interfaceName string) string {
-		filename := fmt.Sprintf("%s%s%s.go", prefix, interfaceName, suffix)
-		return path.Join(opts.OutputDir, strings.Replace(strings.ToLower(filename), "-", "_", -1))
+	makeFilename := func(iface *types.Interface) string {
+		prefix := opts.ContentOptions.Prefix
+		if iface.Prefix != "" {
+			prefix = iface.Prefix
+		}
+		if prefix != "" {
+			prefix += "_"
+		}
+
+		filename := fmt.Sprintf("%s%s%s.go", prefix, iface.Name, suffix)
+		return path.Join(opts.OutputOptions.OutputDir, strings.Replace(strings.ToLower(filename), "-", "_", -1))
 	}
 
-	if !opts.Force {
+	if !opts.OutputOptions.Force {
 		allPaths := make([]string, 0, len(ifaces))
 		for _, iface := range ifaces {
-			allPaths = append(allPaths, makeFilename(iface.Name))
+
+			allPaths = append(allPaths, makeFilename(iface))
 		}
 
 		conflict, err := paths.AnyExists(allPaths)
@@ -92,7 +110,7 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 	}
 
 	for _, iface := range ifaces {
-		if err := generateAndRender([]*types.Interface{iface}, makeFilename(iface.Name), opts); err != nil {
+		if err := generateAndRender([]*types.Interface{iface}, makeFilename(iface), opts); err != nil {
 			return err
 		}
 	}
@@ -101,12 +119,12 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 }
 
 func generateAndRender(ifaces []*types.Interface, filename string, opts *Options) error {
-	pkgName := opts.PkgName
-	if opts.ForTest {
+	pkgName := opts.ContentOptions.PkgName
+	if opts.OutputOptions.ForTest {
 		pkgName += "_test"
 	}
 
-	content, err := generateContent(ifaces, pkgName, opts.Prefix, opts.ConstructorPrefix, opts.OutputImportPath)
+	content, err := generateContent(ifaces, pkgName, opts.ContentOptions.Prefix, opts.ContentOptions.ConstructorPrefix, opts.ContentOptions.FilePrefix, opts.ContentOptions.OutputImportPath)
 	if err != nil {
 		return err
 	}
@@ -116,8 +134,8 @@ func generateAndRender(ifaces []*types.Interface, filename string, opts *Options
 		return err
 	}
 
-	if !opts.DisableFormatting {
-		if err := exec.Command(opts.GoImportsBinary, "-w", filename).Run(); err != nil {
+	if !opts.OutputOptions.DisableFormatting {
+		if err := exec.Command(opts.OutputOptions.GoImportsBinary, "-w", filename).Run(); err != nil {
 			return errorWithSolutions{
 				err: fmt.Errorf("failed to format file: %s", err),
 				solutions: []string{
@@ -132,9 +150,14 @@ func generateAndRender(ifaces []*types.Interface, filename string, opts *Options
 	return nil
 }
 
-func generateContent(ifaces []*types.Interface, pkgName, prefix, constructorPrefix, outputImportPath string) (string, error) {
+func generateContent(ifaces []*types.Interface, pkgName, prefix, constructorPrefix, fileContentPrefix, outputImportPath string) (string, error) {
+	if fileContentPrefix != "" {
+		separator := "\n// "
+		fileContentPrefix = "\n//" + separator + strings.Join(strings.Split(strings.TrimSpace(fileContentPrefix), "\n"), separator)
+	}
+
 	file := jen.NewFile(pkgName)
-	file.HeaderComment(fmt.Sprintf("Code generated by %s %s; DO NOT EDIT.", consts.Name, consts.Version))
+	file.HeaderComment(fmt.Sprintf("// Code generated by %s %s; DO NOT EDIT.%s", consts.Name, consts.Version, fileContentPrefix))
 
 	for _, iface := range ifaces {
 		log.Printf("generating code for interface '%s'\n", iface.Name)
@@ -150,6 +173,11 @@ func generateContent(ifaces []*types.Interface, pkgName, prefix, constructorPref
 }
 
 func generateInterface(file *jen.File, iface *types.Interface, prefix, constructorPrefix, outputImportPath string) {
+	if iface.Prefix != "" {
+		// Override parent prefix if one is set on the iface
+		prefix = iface.Prefix
+	}
+
 	withConstructorPrefix := func(f func(*wrappedInterface, string, string) jen.Code) func(*wrappedInterface, string) jen.Code {
 		return func(iface *wrappedInterface, outputImportPath string) jen.Code {
 			return f(iface, constructorPrefix, outputImportPath)

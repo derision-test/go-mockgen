@@ -11,7 +11,7 @@ import (
 
 func generateMockStructConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	makeField := func(method *wrappedMethod) jen.Code {
-		return makeDefaultHookField(iface, method, generateNoopFunction(iface, method, outputImportPath))
+		return makeDefaultHookField(iface, method, outputImportPath, generateNoopFunction(iface, method, outputImportPath))
 	}
 
 	name := fmt.Sprintf("New%s%s", constructorPrefix, iface.mockStructName)
@@ -19,12 +19,12 @@ func generateMockStructConstructor(iface *wrappedInterface, constructorPrefix, o
 		fmt.Sprintf(`%s creates a new mock of the %s interface.`, name, iface.Name),
 		`All methods return zero values for all results, unless overwritten.`,
 	}
-	return generateConstructor(iface, strings.Join(commentText, " "), name, nil, makeField)
+	return generateConstructor(iface, strings.Join(commentText, " "), name, nil, outputImportPath, makeField)
 }
 
 func generateMockStructStrictConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	makeField := func(method *wrappedMethod) jen.Code {
-		return makeDefaultHookField(iface, method, generatePanickingFunction(iface, method, outputImportPath))
+		return makeDefaultHookField(iface, method, outputImportPath, generatePanickingFunction(iface, method, outputImportPath))
 	}
 
 	name := fmt.Sprintf("NewStrict%s%s", constructorPrefix, iface.mockStructName)
@@ -32,27 +32,27 @@ func generateMockStructStrictConstructor(iface *wrappedInterface, constructorPre
 		fmt.Sprintf(`%s creates a new mock of the %s interface.`, name, iface.Name),
 		`All methods panic on invocation, unless overwritten.`,
 	}
-	return generateConstructor(iface, strings.Join(commentText, " "), name, nil, makeField)
+	return generateConstructor(iface, strings.Join(commentText, " "), name, nil, outputImportPath, makeField)
 }
 
 func generateMockStructFromConstructor(iface *wrappedInterface, constructorPrefix, outputImportPath string) jen.Code {
 	if !unicode.IsUpper([]rune(iface.Name)[0]) {
 		surrogateStructName := fmt.Sprintf("surrogateMock%s", iface.titleName)
-		surrogateDefinition := generateSurrogateInterface(iface, surrogateStructName)
+		surrogateDefinition := generateSurrogateInterface(iface, surrogateStructName, outputImportPath)
 		name := jen.Id(surrogateStructName)
-		constructor := generateMockStructFromConstructorCommon(iface, name, constructorPrefix)
+		constructor := generateMockStructFromConstructorCommon(iface, name, constructorPrefix, outputImportPath)
 		return compose(surrogateDefinition, constructor)
 	}
 
 	importPath := sanitizeImportPath(iface.ImportPath, outputImportPath)
 	name := jen.Qual(importPath, iface.Name)
-	return generateMockStructFromConstructorCommon(iface, name, constructorPrefix)
+	return generateMockStructFromConstructorCommon(iface, name, constructorPrefix, outputImportPath)
 }
 
-func generateMockStructFromConstructorCommon(iface *wrappedInterface, ifaceName *jen.Statement, constructorPrefix string) jen.Code {
+func generateMockStructFromConstructorCommon(iface *wrappedInterface, ifaceName *jen.Statement, constructorPrefix, outputImportPath string) jen.Code {
 	makeField := func(method *wrappedMethod) jen.Code {
 		// i.<MethodName>
-		return makeDefaultHookField(iface, method, jen.Id("i").Dot(method.Name))
+		return makeDefaultHookField(iface, method, outputImportPath, jen.Id("i").Dot(method.Name))
 	}
 
 	name := fmt.Sprintf("New%s%sFrom", constructorPrefix, iface.mockStructName)
@@ -62,8 +62,8 @@ func generateMockStructFromConstructorCommon(iface *wrappedInterface, ifaceName 
 	}
 
 	// (i <InterfaceName>)
-	params := []jen.Code{compose(jen.Id("i"), addTypes(ifaceName, iface.TypeParams, false))}
-	return generateConstructor(iface, strings.Join(commentText, " "), name, params, makeField)
+	params := []jen.Code{compose(jen.Id("i"), addTypes(ifaceName, iface.TypeParams, outputImportPath, false))}
+	return generateConstructor(iface, strings.Join(commentText, " "), name, params, outputImportPath, makeField)
 }
 
 func generateConstructor(
@@ -71,6 +71,7 @@ func generateConstructor(
 	commentText string,
 	methodName string,
 	params []jen.Code,
+	outputImportPath string,
 	makeField func(method *wrappedMethod) jen.Code,
 ) jen.Code {
 	constructorFields := make([]jen.Code, 0, len(iface.Methods))
@@ -79,9 +80,9 @@ func generateConstructor(
 	}
 
 	// return &Mock<Name>{ <constructorField>, ... }
-	returnStatement := compose(jen.Return(), generateStructInitializer(iface.mockStructName, iface.TypeParams, constructorFields...))
-	results := []jen.Code{addTypes(jen.Op("*").Id(iface.mockStructName), iface.TypeParams, false)}
-	functionDeclaration := compose(addTypes(jen.Func().Id(methodName), iface.TypeParams, true), jen.Params(params...).Params(results...).Block(returnStatement))
+	returnStatement := compose(jen.Return(), generateStructInitializer(iface.mockStructName, outputImportPath, iface.TypeParams, constructorFields...))
+	results := []jen.Code{addTypes(jen.Op("*").Id(iface.mockStructName), iface.TypeParams, outputImportPath, false)}
+	functionDeclaration := compose(addTypes(jen.Func().Id(methodName), iface.TypeParams, outputImportPath, true), jen.Params(params...).Params(results...).Block(returnStatement))
 	return addComment(functionDeclaration, 1, commentText)
 }
 
@@ -102,7 +103,7 @@ func generatePanickingFunction(iface *wrappedInterface, method *wrappedMethod, o
 	return jen.Func().Params(method.paramTypes...).Params(method.resultTypes...).Block(panicStatement)
 }
 
-func generateSurrogateInterface(iface *wrappedInterface, surrogateName string) *jen.Statement {
+func generateSurrogateInterface(iface *wrappedInterface, surrogateName, outputImportPath string) *jen.Statement {
 	surrogateCommentText := strings.Join([]string{
 		fmt.Sprintf(`%s is a copy of the %s interface (from the package %s).`, surrogateName, iface.Name, iface.ImportPath),
 		`It is redefined here as it is unexported in the source package.`,
@@ -114,15 +115,15 @@ func generateSurrogateInterface(iface *wrappedInterface, surrogateName string) *
 	}
 
 	// type <SurrogateName> interface { <MethodName>(<Param #n>, ...) (<Result #n>, ...), ... }
-	typeDeclaration := jen.Type().Id(surrogateName).Interface(signatures...).Line()
+	typeDeclaration := addTypes(jen.Type().Id(surrogateName), iface.Interface.TypeParams, outputImportPath, true).Interface(signatures...).Line()
 	return addComment(typeDeclaration, 1, surrogateCommentText)
 }
 
-func makeDefaultHookField(iface *wrappedInterface, method *wrappedMethod, function jen.Code) jen.Code {
+func makeDefaultHookField(iface *wrappedInterface, method *wrappedMethod, outputImportPath string, function jen.Code) jen.Code {
 	fieldName := fmt.Sprintf("%sFunc", method.Name)
 	structName := fmt.Sprintf("%s%s%sFunc", iface.prefix, iface.titleName, method.Name)
 
-	initializer := generateStructInitializer(structName, iface.TypeParams, compose(
+	initializer := generateStructInitializer(structName, outputImportPath, iface.TypeParams, compose(
 		jen.Id("defaultHook").Op(":"),
 		function,
 	))
@@ -131,9 +132,9 @@ func makeDefaultHookField(iface *wrappedInterface, method *wrappedMethod, functi
 	return compose(jen.Id(fieldName), jen.Op(":"), initializer)
 }
 
-func generateStructInitializer(structName string, typeParams []types.TypeParam, fields ...jen.Code) jen.Code {
+func generateStructInitializer(structName string, outputImportPath string, typeParams []types.TypeParam, fields ...jen.Code) jen.Code {
 	// &<StructName>{ fields, ... }
-	return compose(addTypes(jen.Op("&").Id(structName), typeParams, false), jen.Values(padFields(fields)...))
+	return compose(addTypes(jen.Op("&").Id(structName), typeParams, outputImportPath, false), jen.Values(padFields(fields)...))
 }
 
 func padFields(fields []jen.Code) []jen.Code {

@@ -17,7 +17,7 @@ func generateMockFuncSetHookMethod(iface *wrappedInterface, method *wrappedMetho
 	assignStatement := jen.Id("f").Dot("defaultHook").Op("=").Id("hook")
 
 	params := []jen.Code{compose(jen.Id("hook"), method.signature)}
-	return generateMockFuncMethod(iface, method, "SetDefaultHook", commentText, params, nil,
+	return generateMockFuncMethod(iface, outputImportPath, method, "SetDefaultHook", commentText, params, nil,
 		assignStatement, // f.defaultHook = hook
 	)
 }
@@ -34,7 +34,7 @@ func generateMockFuncPushHookMethod(iface *wrappedInterface, method *wrappedMeth
 	appendStatement := selfAppend(jen.Id("f").Dot("hooks"), jen.Id("hook"))
 
 	params := []jen.Code{compose(jen.Id("hook"), method.signature)}
-	return generateMockFuncMethod(iface, method, "PushHook", commentText, params, nil,
+	return generateMockFuncMethod(iface, outputImportPath, method, "PushHook", commentText, params, nil,
 		lockStatement,   // f.mutex.Lock()
 		appendStatement, // f.mutex.Unlock()
 		unlockStatement, // f.hooks = append(f.hooks, hook)
@@ -42,14 +42,14 @@ func generateMockFuncPushHookMethod(iface *wrappedInterface, method *wrappedMeth
 }
 
 func generateMockFuncSetReturnMethod(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
-	return generateMockReturnMethod(iface, method, "SetDefault")
+	return generateMockReturnMethod(iface, method, "SetDefault", outputImportPath)
 }
 
 func generateMockFuncPushReturnMethod(iface *wrappedInterface, method *wrappedMethod, outputImportPath string) jen.Code {
-	return generateMockReturnMethod(iface, method, "Push")
+	return generateMockReturnMethod(iface, method, "Push", outputImportPath)
 }
 
-func generateMockReturnMethod(iface *wrappedInterface, method *wrappedMethod, methodPrefix string) jen.Code {
+func generateMockReturnMethod(iface *wrappedInterface, method *wrappedMethod, methodPrefix, outputImportPath string) jen.Code {
 	commentText := fmt.Sprintf(
 		`%sReturn calls %sHook with a function that returns the given values.`,
 		methodPrefix,
@@ -68,7 +68,7 @@ func generateMockReturnMethod(iface *wrappedInterface, method *wrappedMethod, me
 	functionExpression := jen.Func().Params(method.paramTypes...).Params(method.resultTypes...).Block(returnStatement)
 	callStatement := jen.Id("f").Dot(fmt.Sprintf("%sHook", methodPrefix)).Call(functionExpression)
 
-	return generateMockFuncMethod(iface, method, fmt.Sprintf("%sReturn", methodPrefix), commentText, params, nil,
+	return generateMockFuncMethod(iface, outputImportPath, method, fmt.Sprintf("%sReturn", methodPrefix), commentText, params, nil,
 		callStatement, // f.<SetDefault|Push>Hook(func( T<n>, ... ) { return r<n>, ... })
 	)
 }
@@ -84,7 +84,7 @@ func generateMockFuncNextHookMethod(iface *wrappedInterface, method *wrappedMeth
 	returnStatement := jen.Return(jen.Id("hook"))
 
 	results := []jen.Code{method.signature}
-	return generateMockFuncMethod(iface, method, "nextHook", "", nil, results,
+	return generateMockFuncMethod(iface, outputImportPath, method, "nextHook", "", nil, results,
 		lockStatement,                    // f.mutex.Lock()
 		deferUnlockStatement, jen.Line(), // defer f.mutex.Unlock()
 		returnDefaultIfEmptyCondition, jen.Line(), // if len(f.hooks) == 0 { return f.defaultHook }
@@ -101,8 +101,8 @@ func generateMockFuncAppendCallMethod(iface *wrappedInterface, method *wrappedMe
 	unlockStatement := jen.Id("f").Dot("mutex").Dot("Unlock").Call()
 	appendStatement := selfAppend(jen.Id("f").Dot("history"), jen.Id("r0"))
 
-	params := []jen.Code{compose(jen.Id("r0"), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))}
-	return generateMockFuncMethod(iface, method, "appendCall", "", params, nil,
+	params := []jen.Code{compose(jen.Id("r0"), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, outputImportPath, false))}
+	return generateMockFuncMethod(iface, outputImportPath, method, "appendCall", "", params, nil,
 		lockStatement,   // f.mutex.Lock()
 		appendStatement, // f.history = append(f.history, r0)
 		unlockStatement, // f.mutex.Unlock()
@@ -118,14 +118,14 @@ func generateMockFuncHistoryMethod(iface *wrappedInterface, method *wrappedMetho
 
 	lockStatement := jen.Id("f").Dot("mutex").Dot("Lock").Call()
 	unlockStatement := jen.Id("f").Dot("mutex").Dot("Unlock").Call()
-	callStructSliceType := compose(jen.Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))
+	callStructSliceType := compose(jen.Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, outputImportPath, false))
 	lenHistoryExpression := jen.Len(jen.Id("f").Dot("history"))
 	makeSliceStatement := jen.Id("history").Op(":=").Make(callStructSliceType, lenHistoryExpression)
 	copyStatement := jen.Copy(jen.Id("history"), jen.Id("f").Dot("history"))
 	returnStatement := jen.Return().Id("history")
 
-	results := []jen.Code{compose(jen.Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, false))}
-	return generateMockFuncMethod(iface, method, "History", commentText, nil, results,
+	results := []jen.Code{compose(jen.Index(), addTypes(jen.Id(mockFuncCallStructName), iface.TypeParams, outputImportPath, false))}
+	return generateMockFuncMethod(iface, outputImportPath, method, "History", commentText, nil, results,
 		lockStatement,               // f.mutex.Lock()
 		makeSliceStatement,          // history := make([]<callStructName>, len(f.history))
 		copyStatement,               // copy(history, f.history)
@@ -136,6 +136,7 @@ func generateMockFuncHistoryMethod(iface *wrappedInterface, method *wrappedMetho
 
 func generateMockFuncMethod(
 	iface *wrappedInterface,
+	outputImportPath string,
 	method *wrappedMethod,
 	methodName string,
 	commentText string,
@@ -143,7 +144,7 @@ func generateMockFuncMethod(
 	body ...jen.Code,
 ) jen.Code {
 	mockFuncStructName := fmt.Sprintf("%s%s%sFunc", iface.prefix, iface.titleName, method.Name)
-	receiver := compose(jen.Id("f").Op("*"), addTypes(jen.Id(mockFuncStructName), iface.TypeParams, false))
+	receiver := compose(jen.Id("f").Op("*"), addTypes(jen.Id(mockFuncStructName), iface.TypeParams, outputImportPath, false))
 	methodDeclaration := jen.Func().Params(receiver).Id(methodName).Params(params...).Params(results...).Block(body...)
 	return addComment(methodDeclaration, 1, commentText)
 }
