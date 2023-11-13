@@ -41,6 +41,7 @@ The following flags are defined by the binary.
 | goimports          |            | Path to the goimports binary (uses goimports on your PATH by default). |
 | for-test           |            | Append _test suffix to generated package names and file names. |
 | file-prefix        |            | Content that is written at the top of each generated file. |
+| build-constraints  |            | [Build constraints](https://pkg.go.dev/cmd/go#hdr-Build_constraints) that are added to each generated file. |
 
 ### Configuration file
 

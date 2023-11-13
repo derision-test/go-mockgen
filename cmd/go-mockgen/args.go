@@ -81,6 +81,7 @@ func parseFlags() (*generation.Options, error) {
 	app.Flag("goimports", "Path to the goimports binary.").Default("goimports").StringVar(&opts.OutputOptions.GoImportsBinary)
 	app.Flag("for-test", "Append _test suffix to generated package names and file names.").Default("false").BoolVar(&opts.OutputOptions.ForTest)
 	app.Flag("file-prefix", "Content that is written at the top of each generated file.").StringVar(&opts.ContentOptions.FilePrefix)
+	app.Flag("build-constraints", "Build constraints that are added to each generated file.").StringVar(&opts.ContentOptions.BuildConstraints)
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		return nil, err
