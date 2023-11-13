@@ -26,7 +26,7 @@ func CalledOnce(t require.TestingT, mockFn interface{}, msgAndArgs ...interface{
 	}
 }
 
-// CalledOnce asserts that the mock function object was called exactly n times.
+// CalledN asserts that the mock function object was called exactly n times.
 func CalledN(t require.TestingT, mockFn interface{}, n int, msgAndArgs ...interface{}) {
 	if !mockassert.CalledN(t, mockFn, n, msgAndArgs...) {
 		t.FailNow()
@@ -41,7 +41,7 @@ func CalledWith(t require.TestingT, mockFn interface{}, asserter CallInstanceAss
 	}
 }
 
-// CalledWith asserts that the mock function object was not called with a set of arguments
+// NotCalledWith asserts that the mock function object was not called with a set of arguments
 // matching the given mockassertion function.
 func NotCalledWith(t require.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
 	if !mockassert.NotCalledWith(t, mockFn, asserter, msgAndArgs...) {
@@ -61,6 +61,14 @@ func CalledOnceWith(t require.TestingT, mockFn interface{}, asserter CallInstanc
 // arguments matching the given mockassertion function.
 func CalledNWith(t require.TestingT, mockFn interface{}, n int, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
 	if !mockassert.CalledNWith(t, mockFn, n, asserter, msgAndArgs...) {
+		t.FailNow()
+	}
+}
+
+// CalledAtNWith asserts that the mock function objects nth call was with a set of
+// arguments matching the given call instance asserter.
+func CalledAtNWith(t require.TestingT, mockFn interface{}, n int, asserter CallInstanceAsserter, msgAndArgs ...interface{}) {
+	if !mockassert.CalledAtNWith(t, mockFn, n, asserter, msgAndArgs...) {
 		t.FailNow()
 	}
 }

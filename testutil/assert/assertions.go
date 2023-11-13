@@ -38,7 +38,7 @@ func CalledOnce(t assert.TestingT, mockFn interface{}, msgAndArgs ...interface{}
 	return CalledN(t, mockFn, 1, msgAndArgs...)
 }
 
-// CalledOnce asserts that the mock function object was called exactly n times.
+// CalledN asserts that the mock function object was called exactly n times.
 func CalledN(t assert.TestingT, mockFn interface{}, n int, msgAndArgs ...interface{}) bool {
 	callCount, ok := callCount(t, mockFn, msgAndArgs...)
 	if !ok {
@@ -59,12 +59,12 @@ func CalledWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceAsse
 		return false
 	}
 	if matchingCallCount == 0 {
-		return assert.Fail(t, fmt.Sprintf("Expected %T to be called at least once", mockFn), msgAndArgs...)
+		return assert.Fail(t, fmt.Sprintf("Expected %T to be called with given arguments at least once", mockFn), msgAndArgs...)
 	}
 	return true
 }
 
-// CalledWith asserts that the mock function object was not called with a set of arguments
+// NotCalledWith asserts that the mock function object was not called with a set of arguments
 // matching the given call instance asserter.
 func NotCalledWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceAsserter, msgAndArgs ...interface{}) bool {
 	matchingCallCount, ok := callCountWith(t, mockFn, asserter, msgAndArgs...)
@@ -72,7 +72,7 @@ func NotCalledWith(t assert.TestingT, mockFn interface{}, asserter CallInstanceA
 		return false
 	}
 	if matchingCallCount != 0 {
-		return assert.Fail(t, fmt.Sprintf("Did not expect %T to be called", mockFn), msgAndArgs...)
+		return assert.Fail(t, fmt.Sprintf("Did not expect %T to be called with given arguments", mockFn), msgAndArgs...)
 	}
 	return true
 }
@@ -91,8 +91,26 @@ func CalledNWith(t assert.TestingT, mockFn interface{}, n int, asserter CallInst
 		return false
 	}
 	if matchingCallCount != n {
-		return assert.Fail(t, fmt.Sprintf("Expected %T to be called exactly %d times, called %d times", mockFn, n, matchingCallCount), msgAndArgs...)
+		return assert.Fail(t, fmt.Sprintf("Expected %T to be called with given arguments exactly %d times, called %d times", mockFn, n, matchingCallCount), msgAndArgs...)
 	}
+	return true
+}
+
+// CalledAtNWith asserts that the mock function objects nth call was with a set of
+// arguments matching the given call instance asserter.
+func CalledAtNWith(t assert.TestingT, mockFn interface{}, n int, asserter CallInstanceAsserter, msgAndArgs ...interface{}) bool {
+	hist, ok := testutil.GetCallHistory(mockFn)
+	if !ok {
+		return false
+	}
+	if len(hist) < n {
+		return assert.Fail(t, fmt.Sprintf("Expected %T to be called at least %d times, called %d times", mockFn, n, len(hist)), msgAndArgs...)
+	}
+
+	if !asserter.Assert(hist[n]) {
+		return assert.Fail(t, fmt.Sprintf("Expected call %d of %T to be with given arguments", n, mockFn), msgAndArgs...)
+	}
+
 	return true
 }
 
