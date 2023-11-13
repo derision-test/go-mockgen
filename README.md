@@ -187,6 +187,7 @@ The following methods are defined in both packages.
 - `NotCalledWith(t, mockFn, msgAndArgs...)`
 - `CalledOnceWith(t, mockFn, msgAndArgs...)`
 - `CalledNWith(t, mockFn, n, msgAndArgs...)`
+- `CalledAtNWith(t, mockFn, n, msgAndArgs...)`
 
 These methods can be used as follows.
 

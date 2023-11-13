@@ -9,8 +9,8 @@ import (
 
 // CallInstanceAsserter determines whether or not a set of argument values from a call
 // of a mock function match the test constraints of a particular function call. See the
-// assertions `CalledWith`, `NotCalledWith`, `CalledOnceWith`, and `CalledNWith` for
-// further usage.
+// assertions `CalledWith`, `NotCalledWith`, `CalledOnceWith`, `CalledNWith`, and
+// `CalledAtNWith` for further usage.
 type CallInstanceAsserter interface {
 	// Assert determines if the given argument values matches the expected
 	// function call.

@@ -39,6 +39,12 @@ func TestTestifyCallsWithVariadicArgs(t *testing.T) {
 	mockassert.CalledNWith(t, mock.DoArgsFunc, 2, mockassert.Values(
 		func(v string) bool { return strings.Contains(v, "a") },
 	))
+	mockassert.CalledAtNWith(t, mock.DoArgsFunc, 1, mockassert.Values(
+		func(v string) bool { return strings.Contains(v, "a") },
+	))
+	mockassert.CalledAtNWith(t, mock.DoArgsFunc, 2, mockassert.Values(
+		func(v string) bool { return strings.Contains(v, "a") },
+	))
 
 	// Mismatched variadic arg
 	mockassert.NotCalledWith(t, mock.DoArgsFunc, mockassert.Values(
