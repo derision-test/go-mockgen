@@ -303,7 +303,7 @@ func validateOutputPaths(opts *generation.Options) (bool, error) {
 	return false, nil
 }
 
-var goIdentifierPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*[A-Za-z])?$")
+var goIdentifierPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*)?$")
 
 func validateOptions(opts *generation.Options) (bool, error) {
 	for _, packageOpts := range opts.PackageOptions {
