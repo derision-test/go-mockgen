@@ -1,0 +1,16 @@
+force: true
+disable-formatting: true
+mocks:
+  - filename: mock_test.go
+    package: integrationgcexportdata
+    interfaces:
+      - Banana
+    path: github.com/derision-test/go-mockgen/internal/integration-gcexportdata
+    source-files:
+      - sampletext.go
+    archives:
+      # need to include sources for this as its a direct dependency
+      # (a package from which we're generating mocks)
+      - github.com/derision-test/go-mockgen/internal/integration-gcexportdata=sampletext.a
+      # don't need to include sources for this, as its an indirect dependency
+      - github.com/derision-test/go-mockgen/testutil/require=require.a 

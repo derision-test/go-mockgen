@@ -3,8 +3,8 @@ package generation
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -17,6 +17,7 @@ import (
 )
 
 type Options struct {
+	ManifestDir    string
 	PackageOptions []PackageOptions
 	OutputOptions  OutputOptions
 	ContentOptions ContentOptions
@@ -27,6 +28,10 @@ type PackageOptions struct {
 	Interfaces  []string
 	Exclude     []string
 	Prefix      string
+
+	StdlibRoot  string
+	SourceFiles []string
+	Archives    []string
 }
 
 type OutputOptions struct {
@@ -91,13 +96,12 @@ func generateDirectory(ifaces []*types.Interface, opts *Options) error {
 		}
 
 		filename := fmt.Sprintf("%s%s%s.go", prefix, iface.Name, suffix)
-		return path.Join(opts.OutputOptions.OutputDir, strings.Replace(strings.ToLower(filename), "-", "_", -1))
+		return path.Join(opts.OutputOptions.OutputDir, strings.ReplaceAll(strings.ToLower(filename), "-", "_"))
 	}
 
 	if !opts.OutputOptions.Force {
 		allPaths := make([]string, 0, len(ifaces))
 		for _, iface := range ifaces {
-
 			allPaths = append(allPaths, makeFilename(iface))
 		}
 
@@ -131,7 +135,7 @@ func generateAndRender(ifaces []*types.Interface, filename string, opts *Options
 	}
 
 	log.Printf("writing to '%s'\n", paths.GetRelativePath(filename))
-	if err := ioutil.WriteFile(filename, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
 		return err
 	}
 

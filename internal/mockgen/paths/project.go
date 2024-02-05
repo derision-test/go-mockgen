@@ -2,15 +2,16 @@ package paths
 
 import (
 	"go/build"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-var srcpath = filepath.Join(gopath(), "src")
-var modulePattern = regexp.MustCompile(`^module\s+(.+)$`)
+var (
+	srcpath       = filepath.Join(gopath(), "src")
+	modulePattern = regexp.MustCompile(`^module\s+(.+)$`)
+)
 
 func InferImportPath(dirname string) (string, bool) {
 	if module, wd, ok := module(dirname); ok {
@@ -71,7 +72,7 @@ func module(dirname string) (string, string, bool) {
 }
 
 func gomod(dirname string) (string, bool) {
-	content, err := ioutil.ReadFile(filepath.Join(dirname, "go.mod"))
+	content, err := os.ReadFile(filepath.Join(dirname, "go.mod"))
 	if err != nil {
 		return "", false
 	}
