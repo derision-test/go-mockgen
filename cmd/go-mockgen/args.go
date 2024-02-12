@@ -43,12 +43,16 @@ func parseAndValidateOptions() ([]*generation.Options, error) {
 
 func parseOptions() ([]*generation.Options, error) {
 	if len(os.Args) == 1 {
-		return parseManifest()
+		return parseManifest("")
 	}
 
 	opts, err := parseFlags()
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.ManifestDir != "" {
+		return parseManifest(opts.ManifestDir)
 	}
 
 	return []*generation.Options{opts}, nil
@@ -67,7 +71,7 @@ func parseFlags() (*generation.Options, error) {
 	app := kingpin.New(consts.Name, consts.Description).Version(consts.Version)
 	app.UsageWriter(os.Stdout)
 
-	app.Arg("path", "The import paths used to search for eligible interfaces").Required().StringsVar(&opts.PackageOptions[0].ImportPaths)
+	app.Arg("path", "The import paths used to search for eligible interfaces").StringsVar(&opts.PackageOptions[0].ImportPaths)
 	app.Flag("package", "The name of the generated package. It will be inferred from the output options by default.").Short('p').StringVar(&opts.ContentOptions.PkgName)
 	app.Flag("interfaces", "A list of target interfaces to generate defined in the given the import paths.").Short('i').StringsVar(&opts.PackageOptions[0].Interfaces)
 	app.Flag("exclude", "A list of interfaces to exclude from generation. Mocks for all other exported interfaces defined in the given import paths are generated.").Short('e').StringsVar(&opts.PackageOptions[0].Exclude)
@@ -82,6 +86,7 @@ func parseFlags() (*generation.Options, error) {
 	app.Flag("for-test", "Append _test suffix to generated package names and file names.").Default("false").BoolVar(&opts.OutputOptions.ForTest)
 	app.Flag("file-prefix", "Content that is written at the top of each generated file.").StringVar(&opts.ContentOptions.FilePrefix)
 	app.Flag("build-constraints", "Build constraints that are added to each generated file.").StringVar(&opts.ContentOptions.BuildConstraints)
+	app.Flag("manifest-dir", "Dir in which to search for the root mockgen.yaml file in. All other flags are ignored if this is set, and config is taken from the manifest file(s).").StringVar(&opts.ManifestDir)
 
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		return nil, err
@@ -90,8 +95,8 @@ func parseFlags() (*generation.Options, error) {
 	return opts, nil
 }
 
-func parseManifest() ([]*generation.Options, error) {
-	payload, err := readManifest()
+func parseManifest(manifestDir string) ([]*generation.Options, error) {
+	payload, err := readManifest(manifestDir)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +131,10 @@ func parseManifest() ([]*generation.Options, error) {
 			opts.ForTest = true
 		}
 
+		if len(opts.Paths) > 0 && len(opts.Archives) > 0 {
+			return nil, fmt.Errorf("multiple import paths and archives are mutually exclusive")
+		}
+
 		// Canonicalization
 		paths := opts.Paths
 		if opts.Path != "" {
@@ -139,11 +148,15 @@ func parseManifest() ([]*generation.Options, error) {
 
 		var packageOptions []generation.PackageOptions
 		if len(opts.Sources) > 0 {
-			if len(opts.Paths) > 0 || len(opts.Interfaces) > 0 {
+			if len(opts.Paths) > 0 || len(opts.Interfaces) > 0 || opts.Path != "" {
 				return nil, fmt.Errorf("sources and path/paths/interfaces are mutually exclusive")
 			}
 
 			for _, source := range opts.Sources {
+				if len(source.Paths) > 0 && len(opts.Archives) > 0 {
+					return nil, fmt.Errorf("multiple import paths and archives are mutually exclusive")
+				}
+
 				// Canonicalization
 				paths := source.Paths
 				if source.Path != "" {
@@ -155,6 +168,9 @@ func parseManifest() ([]*generation.Options, error) {
 					Interfaces:  source.Interfaces,
 					Exclude:     source.Exclude,
 					Prefix:      source.Prefix,
+					Archives:    opts.Archives,
+					SourceFiles: source.SourceFiles,
+					StdlibRoot:  payload.StdlibRoot,
 				})
 			}
 		} else {
@@ -163,6 +179,9 @@ func parseManifest() ([]*generation.Options, error) {
 				Interfaces:  opts.Interfaces,
 				Exclude:     opts.Exclude,
 				Prefix:      opts.Prefix,
+				Archives:    opts.Archives,
+				SourceFiles: opts.SourceFiles,
+				StdlibRoot:  payload.StdlibRoot,
 			})
 		}
 
@@ -203,6 +222,8 @@ type yamlPayload struct {
 	ForTest           bool     `yaml:"for-test"`
 	FilePrefix        string   `yaml:"file-prefix"`
 
+	StdlibRoot string `yaml:"stdlib-root"`
+
 	Mocks []yamlMock `yaml:"mocks"`
 }
 
@@ -210,6 +231,8 @@ type yamlMock struct {
 	Path              string       `yaml:"path"`
 	Paths             []string     `yaml:"paths"`
 	Sources           []yamlSource `yaml:"sources"`
+	SourceFiles       []string     `yaml:"source-files"`
+	Archives          []string     `yaml:"archives"`
 	Package           string       `yaml:"package"`
 	Interfaces        []string     `yaml:"interfaces"`
 	Exclude           []string     `yaml:"exclude"`
@@ -226,15 +249,16 @@ type yamlMock struct {
 }
 
 type yamlSource struct {
-	Path       string   `yaml:"path"`
-	Paths      []string `yaml:"paths"`
-	Interfaces []string `yaml:"interfaces"`
-	Exclude    []string `yaml:"exclude"`
-	Prefix     string   `yaml:"prefix"`
+	Path        string   `yaml:"path"`
+	Paths       []string `yaml:"paths"`
+	Interfaces  []string `yaml:"interfaces"`
+	Exclude     []string `yaml:"exclude"`
+	Prefix      string   `yaml:"prefix"`
+	SourceFiles []string `yaml:"source-files"`
 }
 
-func readManifest() (yamlPayload, error) {
-	contents, err := os.ReadFile("mockgen.yaml")
+func readManifest(manifestDir string) (yamlPayload, error) {
+	contents, err := os.ReadFile(filepath.Join(manifestDir, "mockgen.yaml"))
 	if err != nil {
 		return yamlPayload{}, err
 	}
@@ -245,7 +269,7 @@ func readManifest() (yamlPayload, error) {
 	}
 
 	for _, path := range payload.IncludeConfigPaths {
-		payload, err = readIncludeConfig(payload, path)
+		payload, err = readIncludeConfig(payload, filepath.Join(manifestDir, path))
 		if err != nil {
 			return yamlPayload{}, err
 		}
@@ -307,6 +331,10 @@ var goIdentifierPattern = regexp.MustCompile("^[A-Za-z]([A-Za-z0-9_]*)?$")
 
 func validateOptions(opts *generation.Options) (bool, error) {
 	for _, packageOpts := range opts.PackageOptions {
+		if len(packageOpts.ImportPaths) == 0 {
+			return false, fmt.Errorf("missing interface source import paths")
+		}
+
 		if len(packageOpts.Interfaces) != 0 && len(packageOpts.Exclude) != 0 {
 			return false, fmt.Errorf("interface lists and exclude lists are mutually exclusive")
 		}

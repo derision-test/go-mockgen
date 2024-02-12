@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/derision-test/go-mockgen/internal"
 	"github.com/derision-test/go-mockgen/internal/mockgen/paths"
 	"golang.org/x/tools/go/packages"
 )
@@ -18,9 +19,13 @@ type PackageOptions struct {
 	Interfaces  []string
 	Exclude     []string
 	Prefix      string
+
+	StdlibRoot  string
+	SourceFiles []string
+	Archives    []string
 }
 
-func Extract(pkgs []*packages.Package, packageOptions []PackageOptions) (ifaces []*Interface, _ error) {
+func Extract(pkgs []*internal.GoPackage, packageOptions []PackageOptions) (ifaces []*Interface, _ error) {
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory (%s)", err.Error())
@@ -48,7 +53,7 @@ func Extract(pkgs []*packages.Package, packageOptions []PackageOptions) (ifaces 
 	return ifaces, nil
 }
 
-func gatherAllPackageTypes(pkgs []*packages.Package, workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
+func gatherAllPackageTypes(pkgs []*internal.GoPackage, workingDirectory string, importPaths []string) (map[string]map[string]*Interface, error) {
 	packageTypes := make(map[string]map[string]*Interface, len(importPaths))
 	for _, importPath := range importPaths {
 		path, dir := paths.ResolveImportPath(workingDirectory, importPath)
@@ -65,7 +70,7 @@ func gatherAllPackageTypes(pkgs []*packages.Package, workingDirectory string, im
 	return packageTypes, nil
 }
 
-func gatherTypesForPackage(pkgs []*packages.Package, importPath, path string) (map[string]*Interface, error) {
+func gatherTypesForPackage(pkgs []*internal.GoPackage, importPath, path string) (map[string]*Interface, error) {
 	for _, pkg := range pkgs {
 		if pkg.PkgPath != path {
 			continue
@@ -144,13 +149,13 @@ func extractInterface(packageTypes map[string]map[string]*Interface, name string
 
 func shouldInclude(name string, targetNames, excludeNames []string) bool {
 	for _, v := range excludeNames {
-		if strings.ToLower(v) == strings.ToLower(name) {
+		if strings.EqualFold(v, name) {
 			return false
 		}
 	}
 
 	for _, v := range targetNames {
-		if strings.ToLower(v) == strings.ToLower(name) {
+		if strings.EqualFold(v, name) {
 			return true
 		}
 	}
