@@ -173,8 +173,8 @@ To use the assertions, import the assert and require packages by name.
 
 ```go
 import (
-    mockassert "github.com/derision-test/go-mockgen/testutil/assert"
-    mockrequire "github.com/derision-test/go-mockgen/testutil/require"
+    mockassert "github.com/derision-test/go-mockgen/v2/testutil/assert"
+    mockrequire "github.com/derision-test/go-mockgen/v2/testutil/require"
 )
 ```
 
@@ -210,7 +210,7 @@ This library also contains a set of [Gomega](https://onsi.github.io/gomega/) mat
 To use the matchers, import the matchers package anonymously.
 
 ```go
-import . "github.com/derision-test/go-mockgen/testutil/gomega"
+import . "github.com/derision-test/go-mockgen/v2/testutil/gomega"
 ```
 
 The following matchers are defined.

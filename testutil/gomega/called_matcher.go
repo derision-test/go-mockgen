@@ -3,7 +3,7 @@ package matchers
 import (
 	"fmt"
 
-	"github.com/derision-test/go-mockgen/internal/testutil"
+	"github.com/derision-test/go-mockgen/v2/internal/testutil"
 	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 )

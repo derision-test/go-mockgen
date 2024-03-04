@@ -11,7 +11,8 @@ func TestGenerateMockStruct(t *testing.T) {
 	code := generateMockStruct(makeInterface(TestMethodStatus, TestMethodDo, TestMethodDof), "")
 	expected := strip(`
 		// MockTestClient is a mock implementation of the Client interface (from the
-		// package github.com/derision-test/go-mockgen/test) used for unit testing.
+		// package github.com/derision-test/go-mockgen/v2/test) used for unit
+		// testing.
 		type MockTestClient struct {
 			// StatusFunc is an instance of a mock function object controlling the
 			// behavior of the method Status.

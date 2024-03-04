@@ -1,7 +1,7 @@
 package mockrequire
 
 import (
-	mockassert "github.com/derision-test/go-mockgen/testutil/assert"
+	mockassert "github.com/derision-test/go-mockgen/v2/testutil/assert"
 	"github.com/stretchr/testify/require"
 )
 
