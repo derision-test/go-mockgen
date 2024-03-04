@@ -9,7 +9,7 @@ Nothing yet!
 - Changed name of module to `github.com/derision-test/go-mockgen/v2`.
 - Updated module to Go 1.22. [#52](https://github.com/derision-test/go-mockgen/pull/52)
 
-## [v2.0.0] - 2024-03-04
+## v2.0.0 - 2024-03-04
 
 **PULLED**, as module name was not updated properly.
 
@@ -119,3 +119,4 @@ No significant changes (only corrected version output).
 [v1.3.5]: https://github.com/derision-test/go-mockgen/compare/v1.3.4...v1.3.5
 [v1.3.6]: https://github.com/derision-test/go-mockgen/compare/v1.3.5...v1.3.6
 [v1.3.7]: https://github.com/derision-test/go-mockgen/compare/v1.3.6...v1.3.7
+[v2.0.1]: https://github.com/derision-test/go-mockgen/compare/v1.3.7...v2.0.1
