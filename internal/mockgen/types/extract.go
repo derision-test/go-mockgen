@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/derision-test/go-mockgen/internal/mockgen/paths"
+	"github.com/derision-test/go-mockgen/v2/internal/mockgen/paths"
 	"golang.org/x/tools/go/packages"
 )
 

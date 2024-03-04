@@ -4,14 +4,14 @@ import (
 	gotypes "go/types"
 	"strings"
 
-	"github.com/derision-test/go-mockgen/internal/mockgen/types"
+	"github.com/derision-test/go-mockgen/v2/internal/mockgen/types"
 )
 
 const (
 	TestPrefix         = "Test"
 	TestTitleName      = "Client"
 	TestMockStructName = "MockTestClient"
-	TestImportPath     = "github.com/derision-test/go-mockgen/test"
+	TestImportPath     = "github.com/derision-test/go-mockgen/v2/test"
 )
 
 var (

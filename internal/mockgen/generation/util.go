@@ -2,7 +2,7 @@ package generation
 
 import (
 	"github.com/dave/jennifer/jen"
-	"github.com/derision-test/go-mockgen/internal/mockgen/types"
+	"github.com/derision-test/go-mockgen/v2/internal/mockgen/types"
 )
 
 func compose(stmt *jen.Statement, tail ...jen.Code) *jen.Statement {

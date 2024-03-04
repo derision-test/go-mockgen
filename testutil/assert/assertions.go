@@ -3,7 +3,7 @@ package mockassert
 import (
 	"fmt"
 
-	"github.com/derision-test/go-mockgen/internal/testutil"
+	"github.com/derision-test/go-mockgen/v2/internal/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
