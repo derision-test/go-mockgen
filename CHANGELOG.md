@@ -124,3 +124,4 @@ No significant changes (only corrected version output).
 [v1.3.6]: https://github.com/derision-test/go-mockgen/compare/v1.3.5...v1.3.6
 [v1.3.7]: https://github.com/derision-test/go-mockgen/compare/v1.3.6...v1.3.7
 [v2.0.1]: https://github.com/derision-test/go-mockgen/compare/v1.3.7...v2.0.1
+[v2.0.2]: https://github.com/derision-test/go-mockgen/compare/v2.0.1...v2.0.2
