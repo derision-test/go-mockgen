@@ -4,6 +4,10 @@
 
 Nothing yet!
 
+## [v2.0.2] - 2025-05-01
+
+- Version bump.
+
 ## [v2.0.1] - 2024-03-04
 
 - Changed name of module to `github.com/derision-test/go-mockgen/v2`.
