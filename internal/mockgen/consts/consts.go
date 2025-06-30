@@ -4,5 +4,5 @@ const (
 	Name        = "go-mockgen"
 	PackageName = "github.com/derision-test/go-mockgen/v2"
 	Description = "go-mockgen generates mock implementations from interface definitions."
-	Version     = "2.0.2"
+	Version     = "2.1.1"
 )
