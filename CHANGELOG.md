@@ -4,6 +4,10 @@
 
 Nothing yet!
 
+## [v2.1.1] - 2025-06-28
+
+- Specify correct version in generated output. [9b2e39c6c2d5b3a3534d644dcad1a101e80c387f](https://github.com/derision-test/go-mockgen/commit/9b2e39c6c2d5b3a3534d644dcad1a101e80c387f)
+
 ## [v2.1.0] - 2025-06-28
 
 - Add support for type aliases (e.g. `any`). [83f0214f1447da03d4bdad04aae5309b155b818a](https://github.com/derision-test/go-mockgen/commit/83f0214f1447da03d4bdad04aae5309b155b818a)
@@ -113,7 +117,7 @@ No significant changes (only corrected version output).
 - We now run `goimports` over rendered files. [096f848](https://github.com/derision-test/go-mockgen/commit/096f848333579e185c8018ff2d17688e4b5f6f27)
 - Fixed output paths when directories are generated. [#10](https://github.com/derision-test/go-mockgen/pull/10)
 
-[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/derision-test/go-mockgen/compare/v2.1.1...HEAD
 [v1.0.0]: https://github.com/derision-test/go-mockgen/releases/tag/v1.0.0
 [v1.1.1]: https://github.com/derision-test/go-mockgen/compare/v1.0.0...v1.1.1
 [v1.1.2]: https://github.com/derision-test/go-mockgen/compare/v1.1.1...v1.1.2
@@ -131,3 +135,4 @@ No significant changes (only corrected version output).
 [v2.0.1]: https://github.com/derision-test/go-mockgen/compare/v1.3.7...v2.0.1
 [v2.0.2]: https://github.com/derision-test/go-mockgen/compare/v2.0.1...v2.0.2
 [v2.1.0]: https://github.com/derision-test/go-mockgen/compare/v2.0.2...v2.1.0
+[v2.1.0]: https://github.com/derision-test/go-mockgen/compare/v2.1.0...v2.1.1
