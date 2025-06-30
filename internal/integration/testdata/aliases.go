@@ -17,7 +17,7 @@ type Bar struct {
 	Name string
 }
 
-type Bars Bars
+type Bars Bar
 
 type AliasReference interface {
 	GetFoos() (Foos, error)

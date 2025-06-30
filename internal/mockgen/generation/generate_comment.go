@@ -1,7 +1,6 @@
 package generation
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/dave/jennifer/jen"
@@ -15,13 +14,12 @@ var (
 	maxLevels    = 3
 )
 
-func generateComment(level int, format string, args ...interface{}) *jen.Statement {
+func generateComment(level int, commentText string) *jen.Statement {
 	allowance := maxAllowance - indent*level - 3
 	if allowance < minAllowance {
 		allowance = minAllowance
 	}
 
-	commentText := fmt.Sprintf(format, args...)
 	wrapped := wordwrap.WrapString(commentText, uint(allowance))
 	lines := strings.Split(wrapped, "\n")
 	commentBlock := jen.Comment(lines[0]).Line()

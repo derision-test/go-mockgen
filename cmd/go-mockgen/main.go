@@ -29,7 +29,7 @@ func main() {
 			message += "\n"
 		}
 
-		log.Fatalf(message)
+		log.Fatal(message)
 	}
 }
 
